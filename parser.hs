@@ -1,5 +1,8 @@
 import Data.Char
 import System.Posix (inputTime)
+import Language.Haskell.TH (Exp)
+import Foreign.C (e2BIG)
+import Control.Arrow (ArrowChoice(right, left))
 
 data ParsingResult a = ParsingSuccess a String | ParsingError String deriving Show
 
@@ -70,16 +73,53 @@ handleNegative _ num = 0-num
 negativeIntegerParser :: Parser Integer 
 negativeIntegerParser = pure handleNegative <*> charParser '-' <*> positiveIntegerParser
 
+integerParser :: Parser Integer 
+integerParser = anyOf [negativeIntegerParser, positiveIntegerParser]
+
+
 runParser :: Parser a -> String -> ParsingResult a
 runParser (Parser f) input = f input             
 
--- What we want is an addition parser.
--- <Expression> + <Expression>
+optionalParser :: Parser a -> Parser (Maybe a)
+optionalParser parser = Parser (\input -> case (runParser parser input) of
+                                          ParsingSuccess val rest -> ParsingSuccess (Just val) rest
+                                          ParsingError e -> ParsingSuccess Nothing input)
 
-data Expression = Addition Integer Integer | Subtraction Integer Integer 
+data Expression = IntegerExpression Integer | Addition Expression Expression | Subtraction Expression Expression 
+                deriving Show
 
+integerExpressionParser :: Parser Expression
+integerExpressionParser = Parser (\input -> case (runParser integerParser input) of
+                                            ParsingSuccess val rest -> ParsingSuccess (IntegerExpression val) rest
+                                            ParsingError e -> ParsingError e)
+
+expressionStartParser :: Parser Expression
+expressionStartParser = anyOf [integerExpressionParser]
+
+
+handleExpressionEnd :: Char -> Expression -> Expression
+handleExpressionEnd _ expr = expr
+
+expressionEndParser :: Char -> Parser Expression
+expressionEndParser sign = pure handleExpressionEnd <*> charParser sign <*> expressionParser
+
+handleExpression :: (Expression -> Expression -> Expression) -> Expression -> Maybe Expression -> Expression
+handleExpression sign left (Just right) = sign left right
+handleExpression sign left Nothing = left
+
+getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
+getConstructorFromSign '+' = Addition
+getConstructorFromSign '-' = Subtraction
+
+getExpressionParser :: Char -> Parser Expression
+getExpressionParser sign = pure (handleExpression (getConstructorFromSign sign)) 
+                            <*> expressionStartParser 
+                            <*> optionalParser (expressionEndParser sign)
+
+expressionParser :: Parser Expression
+expressionParser =  anyOf [(getExpressionParser '-'), (getExpressionParser '+')]
 
 
 main :: IO ()
-main = putStrLn (show (runParser negativeIntegerParser "-1249888h"));
+main = putStrLn (show (runParser expressionParser "1-2+3"));
 
