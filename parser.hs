@@ -5,6 +5,17 @@ data ParsingResult a = ParsingSuccess a String | ParsingError String deriving Sh
 
 data Parser a = Parser (String -> ParsingResult a)
 
+instance Functor Parser where
+    fmap newF (Parser f) =  Parser (\input -> case (f input) of 
+                                              ParsingSuccess val rest -> ParsingSuccess (newF val) rest
+                                              ParsingError err -> ParsingError err) 
+
+instance Applicative Parser where
+    pure a = Parser (\input -> ParsingSuccess a input)
+    p1 <*> p2 = Parser (\input -> case (runParser p1 input) of 
+                                  ParsingError e -> ParsingError e
+                                  ParsingSuccess f rest -> runParser (fmap f p2) rest)
+
 -- The most primitive parser. The Parser returns parsing success if the next character is the expected chr.
 charParser :: Char -> Parser Char 
 charParser c = Parser (\input -> (case input of
@@ -52,12 +63,23 @@ positiveIntegerParser = Parser (\input -> case (runParser (oneOrMore digitParser
                                           ParsingError e -> ParsingError "No digits matching the input."
                                           ParsingSuccess l rest -> ParsingSuccess (listToInteger l) rest)
 
+
+handleNegative :: Char -> Integer -> Integer
+handleNegative _ num = 0-num
+
+negativeIntegerParser :: Parser Integer 
+negativeIntegerParser = pure handleNegative <*> charParser '-' <*> positiveIntegerParser
+
 runParser :: Parser a -> String -> ParsingResult a
 runParser (Parser f) input = f input             
 
-add :: Integer -> Integer -> Integer 
-add a b = a + b;
+-- What we want is an addition parser.
+-- <Expression> + <Expression>
+
+data Expression = Addition Integer Integer | Subtraction Integer Integer 
+
+
 
 main :: IO ()
-main = putStrLn (show (runParser positiveIntegerParser "1249888h"));
+main = putStrLn (show (runParser negativeIntegerParser "-1249888h"));
 
