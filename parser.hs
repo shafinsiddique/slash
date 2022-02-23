@@ -103,23 +103,31 @@ handleExpressionEnd _ expr = expr
 expressionEndParser :: Char -> Parser Expression
 expressionEndParser sign = pure handleExpressionEnd <*> charParser sign <*> expressionParser
 
-handleExpression :: (Expression -> Expression -> Expression) -> Expression -> Maybe Expression -> Expression
-handleExpression sign left (Just right) = sign left right
-handleExpression sign left Nothing = left
+handleAddition ::  Expression -> Maybe Expression -> Expression
+handleAddition left (Just right) =  Addition left right
+handleAddition left Nothing = left
 
-getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
-getConstructorFromSign '+' = Addition
-getConstructorFromSign '-' = Subtraction
+additionParser :: Parser Expression
+additionParser = pure handleAddition <*> expressionStartParser <*> optionalParser (expressionEndParser '+')
+
+handleGetExpression :: Char -> Expression -> Expression -> Expression
+handleGetExpression sign expr1 expr2 = (getConstructorFromSign sign) expr1 expr2
 
 getExpressionParser :: Char -> Parser Expression
-getExpressionParser sign = pure (handleExpression (getConstructorFromSign sign)) 
-                            <*> expressionStartParser 
-                            <*> optionalParser (expressionEndParser sign)
+getExpressionParser sign = pure (handleGetExpression sign) <*> expressionStartParser <*> expressionEndParser sign
+
+getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
+getConstructorFromSign '-' = Subtraction
+
+subtractionParser :: Parser Expression
+subtractionParser = getExpressionParser '-'
 
 expressionParser :: Parser Expression
-expressionParser =  anyOf [(getExpressionParser '-'), (getExpressionParser '+')]
+expressionParser =  anyOf [subtractionParser, additionParser]
+
+-- 2 - 3 / 4 + 3
 
 
 main :: IO ()
-main = putStrLn (show (runParser expressionParser "1-2+3"));
+main = putStrLn (show (runParser expressionParser "1-2+3+3"));
 
