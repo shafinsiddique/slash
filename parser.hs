@@ -93,8 +93,11 @@ integerExpressionParser = Parser (\input -> case (runParser integerParser input)
                                             ParsingSuccess val rest -> ParsingSuccess (IntegerExpression val) rest
                                             ParsingError e -> ParsingError e)
 
+parenthesisExpressionParser :: Parser Expression
+parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' <*> expressionParser <*> charParser ')'
+
 expressionStartParser :: Parser Expression
-expressionStartParser = anyOf [integerExpressionParser]
+expressionStartParser = anyOf [parenthesisExpressionParser, integerExpressionParser]
 
 
 handleExpressionEnd :: Char -> Expression -> Expression
@@ -178,5 +181,5 @@ expressionParser =  anyOf [divisionParser, multiplicationParser, subtractionPars
 
 
 main :: IO ()
-main = putStrLn (show (runParser expressionParser "2*3/4/4"));
+main = putStrLn (show (runParser expressionParser "2/(3/4)"));
 
