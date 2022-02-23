@@ -86,7 +86,7 @@ optionalParser parser = Parser (\input -> case (runParser parser input) of
                                           ParsingError e -> ParsingSuccess Nothing input)
 
 data Expression = IntegerExpression Integer | Addition Expression Expression | Subtraction Expression Expression 
-                | Division Expression Expression deriving Show
+                | Division Expression Expression | Multiplication Expression Expression deriving Show
 
 integerExpressionParser :: Parser Expression
 integerExpressionParser = Parser (\input -> case (runParser integerParser input) of
@@ -120,35 +120,63 @@ getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
 getConstructorFromSign '-' = Subtraction
 getConstructorFromSign '/' = Division
 getConstructorFromSign '+' = Addition
+getConstructorFromSign '*' = Multiplication
 
 subtractionParser :: Parser Expression
 subtractionParser = getExpressionParser '-'
 
-handleEndOfDivision :: Char -> Expression -> (Char, Expression)
-handleEndOfDivision sign expr = (sign, expr)
+handleLowerPrecedence :: Char -> Expression -> (Char, Expression)
+handleLowerPrecedence sign expr = (sign, expr)
 
-endOfDivisionParser :: Parser (Char, Expression)
-endOfDivisionParser = pure handleEndOfDivision 
-                    <*> anyOf [(charParser '+'), (charParser '-'), (charParser '*'),(charParser '/')] 
+lowerPrecedenceParser :: [Char] -> Parser (Char, Expression)
+lowerPrecedenceParser signs = pure handleLowerPrecedence 
+                    <*> anyOf (map charParser signs) 
                     <*> expressionParser
 
 handleDivision :: Expression -> Char -> Expression -> Maybe (Char, Expression) -> Expression
 handleDivision left _ right Nothing = Division left right
 handleDivision left _ right (Just (c, remaining)) = (getConstructorFromSign c) (Division left right) remaining
 
-divisionParser :: Parser Expression
-divisionParser = pure handleDivision 
+getDivisionParser :: [Char] -> Parser Expression
+getDivisionParser lowerPrecedenceSigns = pure handleDivision 
                 <*> expressionStartParser 
                 <*> charParser '/' 
                 <*> expressionStartParser 
-                <*> optionalParser (endOfDivisionParser)
+                <*> optionalParser (lowerPrecedenceParser lowerPrecedenceSigns)
+
+divisionParser :: Parser Expression
+divisionParser = getDivisionParser ['/','*','+','-']
+
+handleMultiplicationFollowedByDivision :: Expression -> Char -> Expression -> Expression
+handleMultiplicationFollowedByDivision left _ right = Multiplication left right 
+
+multiplicationFollowedByDivisionParser :: Parser Expression
+multiplicationFollowedByDivisionParser = pure handleMultiplicationFollowedByDivision 
+                                    <*> expressionStartParser 
+                                    <*> charParser '*' 
+                                    <*> getDivisionParser['/']
+
+handleRegularMultiplication :: Expression -> Char -> Expression -> Maybe (Char, Expression) -> Expression
+handleRegularMultiplication left _ right Nothing = Multiplication left right
+handleRegularMultiplication left _ right (Just (c, remaining)) = (getConstructorFromSign c) (Multiplication left right)
+                                                                 remaining
+
+regularMultiplicationParser :: Parser Expression
+regularMultiplicationParser = pure handleRegularMultiplication 
+                            <*> expressionStartParser 
+                            <*> charParser '*'
+                            <*> expressionStartParser 
+                            <*> (optionalParser (lowerPrecedenceParser ['*','-','+'])) 
+
+multiplicationParser :: Parser Expression
+multiplicationParser = anyOf[multiplicationFollowedByDivisionParser, regularMultiplicationParser]
 
 expressionParser :: Parser Expression
-expressionParser =  anyOf [divisionParser, subtractionParser, additionParser]
+expressionParser =  anyOf [divisionParser, multiplicationParser, subtractionParser, additionParser]
 
 -- 2 - 3 / 4 + 3
 
 
 main :: IO ()
-main = putStrLn (show (runParser expressionParser "2+3/4+1"));
+main = putStrLn (show (runParser expressionParser "2*3/4/4"));
 
