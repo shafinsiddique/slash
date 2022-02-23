@@ -86,7 +86,7 @@ optionalParser parser = Parser (\input -> case (runParser parser input) of
                                           ParsingError e -> ParsingSuccess Nothing input)
 
 data Expression = IntegerExpression Integer | Addition Expression Expression | Subtraction Expression Expression 
-                deriving Show
+                | Division Expression Expression deriving Show
 
 integerExpressionParser :: Parser Expression
 integerExpressionParser = Parser (\input -> case (runParser integerParser input) of
@@ -118,16 +118,37 @@ getExpressionParser sign = pure (handleGetExpression sign) <*> expressionStartPa
 
 getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
 getConstructorFromSign '-' = Subtraction
+getConstructorFromSign '/' = Division
+getConstructorFromSign '+' = Addition
 
 subtractionParser :: Parser Expression
 subtractionParser = getExpressionParser '-'
 
+handleEndOfDivision :: Char -> Expression -> (Char, Expression)
+handleEndOfDivision sign expr = (sign, expr)
+
+endOfDivisionParser :: Parser (Char, Expression)
+endOfDivisionParser = pure handleEndOfDivision 
+                    <*> anyOf [(charParser '+'), (charParser '-'), (charParser '*'),(charParser '/')] 
+                    <*> expressionParser
+
+handleDivision :: Expression -> Char -> Expression -> Maybe (Char, Expression) -> Expression
+handleDivision left _ right Nothing = Division left right
+handleDivision left _ right (Just (c, remaining)) = (getConstructorFromSign c) (Division left right) remaining
+
+divisionParser :: Parser Expression
+divisionParser = pure handleDivision 
+                <*> expressionStartParser 
+                <*> charParser '/' 
+                <*> expressionStartParser 
+                <*> optionalParser (endOfDivisionParser)
+
 expressionParser :: Parser Expression
-expressionParser =  anyOf [subtractionParser, additionParser]
+expressionParser =  anyOf [divisionParser, subtractionParser, additionParser]
 
 -- 2 - 3 / 4 + 3
 
 
 main :: IO ()
-main = putStrLn (show (runParser expressionParser "1-2+3+3"));
+main = putStrLn (show (runParser expressionParser "2+3/4+1"));
 
