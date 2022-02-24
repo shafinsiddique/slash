@@ -1,8 +1,4 @@
-import Data.Char
-import System.Posix (inputTime)
-import Language.Haskell.TH (Exp)
-import Foreign.C (e2BIG)
-import Control.Arrow (ArrowChoice(right, left))
+import Data.Char ( digitToInt, intToDigit )
 
 data ParsingResult a = ParsingSuccess a String | ParsingError String deriving Show
 
@@ -179,7 +175,4 @@ expressionParser =  anyOf [divisionParser, multiplicationParser, subtractionPars
 
 -- 2 - 3 / 4 + 3
 
-
-main :: IO ()
-main = putStrLn (show (runParser expressionParser "2/(3/4)"));
 
