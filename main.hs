@@ -1,3 +1,4 @@
 module Main where
 import Parser.Combinator
-main = putStrLn (show (runParser (charParser 'a') "abc"))
+import Parser.Expression ( expressionParser )
+main = putStrLn (show (runParser expressionParser "1+(2)"))
