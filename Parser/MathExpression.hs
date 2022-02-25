@@ -7,7 +7,10 @@ parenthesisExpressionParser :: Parser Expression
 parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' <*> expressionParser <*> charParser ')'
 
 expressionStartParser :: Parser Expression
-expressionStartParser = anyOf [parenthesisExpressionParser, integerExpressionParser]
+expressionStartParser = pure (\_ -> (\y -> (\_ -> y))) 
+                        <*> spaceParser 
+                        <*> anyOf [parenthesisExpressionParser, integerExpressionParser] 
+                        <*> spaceParser 
 
 handleExpressionEnd :: Char -> Expression -> Expression
 handleExpressionEnd _ expr = expr

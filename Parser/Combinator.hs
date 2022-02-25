@@ -9,7 +9,8 @@ module Parser.Combinator
     runParser,
     optionalParser,
     convertParser,
-    digitParser
+    digitParser,
+    spaceParser
 ) where
 
 import Data.Char ( digitToInt, intToDigit )
@@ -86,3 +87,8 @@ convertParser :: Parser a -> (a->b) -> Parser b
 convertParser parser f = Parser (\input -> case (runParser parser input) of 
                                         ParsingSuccess val rest -> ParsingSuccess (f val) rest
                                         ParsingError e -> ParsingError e)
+
+-- | Skip all whitespaces. 
+spaceParser :: Parser Char
+spaceParser = Parser (\input -> case (runParser (zeroOrMore (charParser ' ')) input) of
+                                ParsingSuccess l rest -> ParsingSuccess ' ' rest)
