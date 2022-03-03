@@ -1,0 +1,33 @@
+module Parser.IntegerExpression
+(
+    integerExpressionParser
+) where
+
+import Parser.ProgramNode (Expression(IntExpr))
+import Parser.Combinator 
+
+listToInteger :: [Integer] -> Integer 
+listToInteger [] = 0
+listToInteger (x:xs) = x*(10 ^ (length xs)) + (listToInteger xs)
+
+-- A Positive Integer is just one or more of digits.
+positiveIntegerParser :: Parser Integer 
+positiveIntegerParser = Parser (\input -> case (runParser (oneOrMore digitParser) input) of 
+                                          ParsingError e -> ParsingError "No digits matching the input."
+                                          ParsingSuccess l rest -> ParsingSuccess (listToInteger l) rest)
+
+
+handleNegative :: Char -> Integer -> Integer
+handleNegative _ num = 0-num
+
+negativeIntegerParser :: Parser Integer 
+negativeIntegerParser = pure handleNegative <*> charParser '-' <*> positiveIntegerParser
+
+integerParser :: Parser Integer 
+integerParser = anyOf [negativeIntegerParser, positiveIntegerParser]
+
+integerExpressionParser :: Parser Expression 
+integerExpressionParser = convertParser integerParser IntExpr
+
+
+
