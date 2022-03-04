@@ -77,7 +77,7 @@ runParser (Parser f) input = f input
 -- Nothing. Otherwise return the returned value with Just. We use this parser because sometimes a value is optional
 -- and we don't want a ParsingError if there was no match.
 optionalParser :: Parser a -> Parser (Maybe a)
-optionalParser parser = Parser (\input -> case (runParser parser input) of
+optionalParser parser = Parser (\input -> case runParser parser input of
                                           ParsingSuccess val rest -> ParsingSuccess (Just val) rest
                                           ParsingError e -> ParsingSuccess Nothing input)
 
