@@ -10,12 +10,15 @@ module Parser.Combinator
     optionalParser,
     convertParser,
     digitParser,
-    spaceParser
+    spaceParser,
+    maybeParsingResult,
 ) where
 
 import Data.Char ( digitToInt, intToDigit )
 
 data ParsingResult a = ParsingSuccess a String | ParsingError String deriving Show
+
+
 
 -- | The Parser data type is a function that takes in a String and returns a ParsingResult. 
 data Parser a = Parser (String -> ParsingResult a)
@@ -92,3 +95,7 @@ convertParser parser f = Parser (\input -> case (runParser parser input) of
 spaceParser :: Parser Char
 spaceParser = Parser (\input -> case (runParser (zeroOrMore (charParser ' ')) input) of
                                 ParsingSuccess l rest -> ParsingSuccess ' ' rest)
+
+maybeParsingResult :: ParsingResult a -> Maybe a
+maybeParsingResult (ParsingSuccess val rest) = Just val
+maybeParsingResult (ParsingError e) = Nothing 
