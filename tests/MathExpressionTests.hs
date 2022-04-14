@@ -44,7 +44,7 @@ additionTestCases = TestList [a1, a2, a3, a4, a5]
 -- SUBTRACTION TEST CASES -- 
 
 sTestLabel ::  Integer ->  String
-sTestLabel num =  "Subtraction Test " ++ (show num)
+sTestLabel num =  "Subtraction Test " ++ show num
 
 s1 = TestLabel (sTestLabel 1) (TestCase $ assertEqual "" (Just 50) (getExprResult "100 - 50") )
 s2 = TestLabel (sTestLabel 2) (TestCase $ assertEqual "" (Just 48) (getExprResult "100 - 50 - 2") )

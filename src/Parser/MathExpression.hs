@@ -1,28 +1,19 @@
 module Parser.MathExpression (mathExpressionParser) where
-import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division))
+import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division, EmptyExpr))
 import Parser.Combinator
 import Parser.IntegerExpression
+import Control.Arrow (ArrowChoice(right))
+import GHC.IO.Buffer (charSize)
+import Control.Concurrent (signalQSemN)
 
 parenthesisExpressionParser :: Parser Expression
-parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' <*> expressionParser <*> charParser ')'
+parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' <*> mathExpressionParser <*> charParser ')'
 
 expressionStartParser :: Parser Expression
 expressionStartParser = (\_ -> (\y -> (\_ -> y))) <$> spaceParser
                         <*> anyOf [parenthesisExpressionParser, integerExpressionParser]
                         <*> spaceParser
 
-handleExpressionEnd :: Char -> Expression -> Expression
-handleExpressionEnd _ expr = expr
-
-expressionEndParser :: Char -> Parser Expression
-expressionEndParser sign = handleExpressionEnd <$> charParser sign <*> expressionParser
-
-handleAddition ::  Expression -> Maybe Expression -> Expression
-handleAddition left (Just right) =  Addition left right
-handleAddition left Nothing = left
-
-additionParser :: Parser Expression
-additionParser = handleAddition <$> expressionStartParser <*> optionalParser (expressionEndParser '+')
 
 getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
 getConstructorFromSign '-' = Subtraction
@@ -32,80 +23,93 @@ getConstructorFromSign '*' = Multiplication
 
 
 
-handleSubtractionHigher :: Expression -> Char -> Expression -> Expression
-handleSubtractionHigher left _ right = Subtraction left right
 
-subtractionWithHigherPrecedence :: Parser Expression
-subtractionWithHigherPrecedence = handleSubtractionHigher <$> expressionStartParser
-                                <*> charParser '-'
-                                <*> anyOf[multiplicationParser, divisionParser]
 
-handleSubtraction :: Expression -> Char -> Expression -> Maybe (Char, Expression) -> Expression
-handleSubtraction l _ r Nothing = Subtraction l r
-handleSubtraction l _ r (Just (c, remaining)) = getConstructorFromSign c (Subtraction l r) remaining
+getCharParsers :: [Char] -> [Parser Char]
+getCharParsers = map charParser
 
-regularSubtraction :: Parser Expression
-regularSubtraction = handleSubtraction <$> expressionStartParser
-                    <*> charParser '-'
-                    <*> expressionStartParser
-                    <*> optionalParser (lowerPrecedenceParser ['-', '+'])
+allSignsParser :: Parser Char 
+allSignsParser = anyOf (map charParser ['+','-','*', '/'])
 
-subtractionParser :: Parser Expression
-subtractionParser = anyOf[subtractionWithHigherPrecedence, regularSubtraction]
+handleBinaryExpression :: Expression -> Char -> Expression -> Expression
+handleBinaryExpression left sign = getConstructorFromSign sign left
 
-handleLowerPrecedence :: Char -> Expression -> (Char, Expression)
-handleLowerPrecedence sign expr = (sign, expr)
-
-lowerPrecedenceParser :: [Char] -> Parser (Char, Expression)
-lowerPrecedenceParser signs = handleLowerPrecedence <$> anyOf (map charParser signs)
-                    <*> expressionParser
-
-handleDivision :: Expression -> Char -> Expression -> Maybe (Char, Expression) -> Expression
-handleDivision left _ right Nothing = Division left right
-handleDivision left _ right (Just (c, remaining)) = getConstructorFromSign c (Division left right) remaining
-
-getDivisionParser :: [Char] -> Parser Expression
-getDivisionParser lowerPrecedenceSigns = handleDivision <$> expressionStartParser
-                <*> charParser '/'
-                <*> expressionStartParser
-                <*> optionalParser (lowerPrecedenceParser lowerPrecedenceSigns)
-
-divisionParser :: Parser Expression
-divisionParser = getDivisionParser ['/','*','+','-']
-
-handleMultiplicationFollowedByDivision :: Expression -> Char -> Expression -> Expression
-handleMultiplicationFollowedByDivision left _ right = Multiplication left right
-
-multiplicationFollowedByDivisionParser :: Parser Expression
-multiplicationFollowedByDivisionParser = handleMultiplicationFollowedByDivision <$> expressionStartParser
-                                    <*> charParser '*'
-                                    <*> getDivisionParser['/']
-
-handleRegularMultiplication :: Expression -> Char -> Expression -> Maybe (Char, Expression) -> Expression
-handleRegularMultiplication left _ right Nothing = Multiplication left right
-handleRegularMultiplication left _ right (Just (c, remaining)) = getConstructorFromSign c
-                                                                (Multiplication left right)
-                                                                remaining
-
-regularMultiplicationParser :: Parser Expression
-regularMultiplicationParser = handleRegularMultiplication <$> expressionStartParser
-                            <*> charParser '*'
+binaryExpressionParser :: Char -> Parser Expression
+binaryExpressionParser sign = handleBinaryExpression <$> expressionStartParser
+                            <*> charParser sign
                             <*> expressionStartParser
-                            <*> optionalParser (lowerPrecedenceParser ['*','-','+'])
+
+-- rightRecursiveParser :: Expression -> [Char] -> Parser Expression
+-- rightRecursiveParser left equalPrecedenceSigns = 
+    
+-- additionParser2 :: Parser Expression
+-- additionParser2 = Parser (\input-> case runParser (binaryExpressionParser '+') input of
+--                                 ParsingSuccess val rest -> ParsingSuccess val rest
+--                                 ParsingError e -> ParsingError e)
+
+anyBinaryExpressionParser :: [Char] -> Parser Expression 
+anyBinaryExpressionParser signs = anyOf (map binaryExpressionParser signs)
+
+getHigherPrecedenceSigns :: Char -> [Char]
+getHigherPrecedenceSigns '+' = ['/','*']
+getHigherPrecedenceSigns '-' = ['/','*']
+getHigherPrecedenceSigns '*' = ['/']
+getHigherPrecedenceSigns '/' = []
+getHigherPrecedenceSigns _ = []
+
+handleHigherPrecedenceParser2 :: Expression -> Char -> Expression -> Expression
+handleHigherPrecedenceParser2 left sign right = (getConstructorFromSign sign) left right 
+
+
+higherPrecedenceParser2 :: Char -> Parser Expression 
+higherPrecedenceParser2 sign = handleHigherPrecedenceParser2 <$> expressionStartParser 
+                                <*> charParser sign
+                                <*> anyBinaryExpressionParser (getHigherPrecedenceSigns sign)
+
+mathStepOneParser :: Char -> Parser Expression 
+mathStepOneParser sign = anyOf [higherPrecedenceParser2 sign, 
+                                                binaryExpressionParser sign]
+
+anyRightRecursion :: Expression -> Parser Expression 
+anyRightRecursion left = Parser (\input -> 
+                                    case runParser 
+                                            (anyOf (map (rightRecursiveMathParser left) ['+','-','*','/'])) input of 
+                                    ParsingError e -> ParsingSuccess left input
+                                    res -> res)
+                            
+
+handleRightRecursionStepOne :: Expression -> Char -> Expression -> Expression 
+handleRightRecursionStepOne left sign = (getConstructorFromSign sign) left 
+
+rightRecursiveStepOneParser :: Char -> Expression -> Parser Expression 
+rightRecursiveStepOneParser sign left = handleRightRecursionStepOne left <$> charParser sign 
+                                    <*> anyOf [anyBinaryExpressionParser (getHigherPrecedenceSigns sign),
+                                                expressionStartParser]
+
+rightRecursiveMathParser :: Expression -> Char -> Parser Expression 
+rightRecursiveMathParser left sign = Parser (\input -> case runParser 
+                                                                (rightRecursiveStepOneParser sign left) input of
+                                                        ParsingSuccess right rest -> 
+                                                            runParser (anyRightRecursion right) rest
+                                                        ParsingError e -> ParsingError e)
+
+getMathParser :: Char -> Parser Expression
+getMathParser sign = Parser (\input -> case runParser (mathStepOneParser sign) input of
+                                    ParsingSuccess expr rest -> runParser (anyRightRecursion expr) rest
+                                    ParsingError e -> ParsingError e)
+
+additionParser :: Parser Expression
+additionParser = getMathParser '+'
+
+subtractionParser :: Parser Expression 
+subtractionParser = getMathParser '-'
 
 multiplicationParser :: Parser Expression
-multiplicationParser = anyOf[multiplicationFollowedByDivisionParser, regularMultiplicationParser]
+multiplicationParser = getMathParser '*'
 
-expressionParser :: Parser Expression
-expressionParser =  anyOf [addParser1, expressionStartParser]
+divisionParser :: Parser Expression
+divisionParser = getMathParser '/'
 
--- | Parser for Math Expressions. A math expression can be any number, or calculation. Eg : 2 + (3*4).
-mathExpressionParser :: Parser Expression
-mathExpressionParser = expressionParser
-
-handleAdd :: Expression -> Char -> Expression -> Expression
-handleAdd l _ r = Addition l r
-
-addParser1 :: Parser Expression 
-addParser1 = handleAdd <$> expressionStartParser <*> charParser '+' <*> expressionStartParser
-
+mathExpressionParser :: Parser Expression 
+mathExpressionParser = anyOf [additionParser, subtractionParser, multiplicationParser,
+                                                        divisionParser ,expressionStartParser]
