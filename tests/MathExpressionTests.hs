@@ -54,7 +54,10 @@ a7 = TestLabel (additionTestLabel 7)
 a8 = TestLabel (additionTestLabel 8) 
             (TestCase $ assertEqual "" (getExprResult "2 + 2 + 2 * 3 * 4 - 3") (Just 25))
 
-additionTestCases = TestList [a1, a2, a3, a4, a5, a6, a7, a8]
+
+a9 = TestLabel (additionTestLabel 9) 
+            (TestCase $ assertEqual "" (getExprResult "2 + 4 * 3 * 4 * 5 * 6") (Just 1442))
+additionTestCases = TestList [a1, a2, a3, a4, a5, a6, a7, a8, a9]
 
 -- SUBTRACTION TEST CASES -- 
 
@@ -65,15 +68,25 @@ s1 = TestLabel (sTestLabel 1) (TestCase $ assertEqual "" (Just 50) (getExprResul
 s2 = TestLabel (sTestLabel 2) (TestCase $ assertEqual "" (Just 48) (getExprResult "100 - 50 - 2") )
 s3 = TestLabel (sTestLabel 3) (TestCase $ assertEqual "" (Just 900) (getExprResult "2000-1000 - 100") )
 s4 = TestLabel (sTestLabel 4) (TestCase $ assertEqual "" (Just 600) (getExprResult "900 - 100-100 - 100"))
+s5 = TestLabel (sTestLabel 5) (TestCase $ assertEqual "" (Just 898) (getExprResult "900 - 100+100+2-4"))
+s6 = TestLabel (sTestLabel 6) (TestCase $ assertEqual "" (Just (-7)) (getExprResult "4 - 5 * 3 + 4"))
+s7 = TestLabel (sTestLabel 7) (TestCase $ assertEqual "" (Just (4)) (getExprResult "(4-4)+(4)"))
+s8 = TestLabel (sTestLabel 8) (TestCase $ assertEqual "" (Just (16)) (getExprResult "(4-4)+(4)*2*2"))
+s9 = TestLabel (sTestLabel 9) (TestCase $ assertEqual "" (Just (-38)) (getExprResult "10-4*3*4"))
+s10 = TestLabel (sTestLabel 10) (TestCase $ assertEqual "" (Just (30)) 
+                                                    (getExprResult "100-10-10-10-10*4"))
 
-subtractionTestCases = TestList [s1, s2, s3, s4]
 
+subtractionTestCases = TestList [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
 
+-- 
  
 
-tests = hUnitTestToTests $ TestList [additionTestCases]
+tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases]
 
 main = defaultMain tests
 
 -- 4 + 3 / 4 / 5
 -- 4
+
+-- 4 - 5 * 3 + 4
