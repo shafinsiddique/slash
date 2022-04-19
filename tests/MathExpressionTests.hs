@@ -79,10 +79,21 @@ s10 = TestLabel (sTestLabel 10) (TestCase $ assertEqual "" (Just (30))
 
 subtractionTestCases = TestList [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
 
--- 
+-- MULTIPLICATION TEST CASES
  
+mTestLabel ::  Integer ->  String
+mTestLabel num =  "Multiplication Test " ++ show num
 
-tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases]
+m1 = TestLabel (mTestLabel 1) (TestCase $ assertEqual "" (Just 36) (getExprResult "2*2*2*2*2+4") )
+m2 = TestLabel (mTestLabel 2) (TestCase $ assertEqual "" (Just 20) (getExprResult "2*10-4+4") )
+m3 = TestLabel (mTestLabel 3) (TestCase $ assertEqual "" (Just (-20)) (getExprResult "2*-10") )
+m4 = TestLabel (mTestLabel 4) (TestCase $ assertEqual "" (Just (9999)) 
+                                                            (getExprResult "100*100*1 + 3 - 4") )
+m5 = TestLabel (mTestLabel 5) (TestCase $ assertEqual "" (Just (27)) (getExprResult "5*5+2-4+(4)") )
+
+
+multiplicationTestCases = TestList [m1, m2, m3, m4, m5]
+tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases, multiplicationTestCases]
 
 main = defaultMain tests
 
