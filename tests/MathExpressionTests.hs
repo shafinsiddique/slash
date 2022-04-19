@@ -15,6 +15,9 @@ subMaybes :: (Num a) => Maybe a -> Maybe a -> Maybe a
 subMaybes (Just l) (Just r) = Just (l - r)
 subMaybes _ _ = Nothing
 
+mulMaybes :: (Num a) => Maybe a -> Maybe a -> Maybe a
+mulMaybes (Just l) (Just r) = Just (l * r)
+mulMaybes _ _ = Nothing
 
 evaluateExpression :: Maybe Expression -> Maybe Integer
 evaluateExpression Nothing = Nothing
@@ -24,6 +27,9 @@ evaluateExpression (Just (Addition left right)) =  addMaybes
                                                             (evaluateExpression (Just right))
 evaluateExpression (Just (Subtraction left right)) = subMaybes 
                                                             (evaluateExpression (Just left))       
+                                                            (evaluateExpression (Just right))
+evaluateExpression (Just (Multiplication left right)) = mulMaybes 
+                                                            (evaluateExpression (Just left)) 
                                                             (evaluateExpression (Just right))
 
 additionTestLabel :: Integer -> String
@@ -39,7 +45,16 @@ a4 = TestLabel (additionTestLabel 4) (TestCase $ assertEqual "" (getExprResult "
 a5 = TestLabel (additionTestLabel 5) 
             (TestCase $ assertEqual "" (getExprResult "100 + 100 + 3 + 5 + 1 + 291") (Just 500))
 
-additionTestCases = TestList [a1, a2, a3, a4, a5]
+a6 = TestLabel (additionTestLabel 6) 
+            (TestCase $ assertEqual "" (getExprResult "100 + 200 - 5 + 4 - 3") (Just 296))
+
+a7 = TestLabel (additionTestLabel 7) 
+            (TestCase $ assertEqual "" (getExprResult "100 * 4 + 3 + (3 + 4) * 2") (Just 417))
+
+a8 = TestLabel (additionTestLabel 8) 
+            (TestCase $ assertEqual "" (getExprResult "2 + 2 + 2 * 3 * 4 - 3") (Just 25))
+
+additionTestCases = TestList [a1, a2, a3, a4, a5, a6, a7, a8]
 
 -- SUBTRACTION TEST CASES -- 
 
@@ -56,6 +71,9 @@ subtractionTestCases = TestList [s1, s2, s3, s4]
 
  
 
-tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases]
+tests = hUnitTestToTests $ TestList [additionTestCases]
 
 main = defaultMain tests
+
+-- 4 + 3 / 4 / 5
+-- 4
