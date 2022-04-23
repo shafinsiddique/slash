@@ -6,18 +6,21 @@ import Parser.MathExpression(mathExpressionParser)
 import Parser.ProgramNode(Expression(..))
 import Parser.Combinator(Parser, runParser, ParsingResult(..), maybeParsingResult)
 
-addMaybes :: (Num a) => Maybe a -> Maybe a -> Maybe a
+addMaybes :: (Integral a) => Maybe a -> Maybe a -> Maybe a
 addMaybes (Just l) (Just r) = Just (l + r)
 addMaybes _ _ = Nothing
 
 
-subMaybes :: (Num a) => Maybe a -> Maybe a -> Maybe a
+subMaybes :: (Integral a) => Maybe a -> Maybe a -> Maybe a
 subMaybes (Just l) (Just r) = Just (l - r)
 subMaybes _ _ = Nothing
 
-mulMaybes :: (Num a) => Maybe a -> Maybe a -> Maybe a
+mulMaybes :: (Integral a) => Maybe a -> Maybe a -> Maybe a
 mulMaybes (Just l) (Just r) = Just (l * r)
 mulMaybes _ _ = Nothing
+
+divMaybes :: (Integral a) => Maybe a -> Maybe a -> Maybe a
+divMaybes (Just l) (Just r) = Just (fromIntegral l `div` fromIntegral r)
 
 evaluateExpression :: Maybe Expression -> Maybe Integer
 evaluateExpression Nothing = Nothing
@@ -31,6 +34,9 @@ evaluateExpression (Just (Subtraction left right)) = subMaybes
 evaluateExpression (Just (Multiplication left right)) = mulMaybes 
                                                             (evaluateExpression (Just left)) 
                                                             (evaluateExpression (Just right))
+evaluateExpression (Just (Division left right)) = divMaybes (evaluateExpression (Just left))       
+                                                            (evaluateExpression (Just right))
+
 
 additionTestLabel :: Integer -> String
 additionTestLabel num = "Addition Test " ++ show num
@@ -93,7 +99,33 @@ m5 = TestLabel (mTestLabel 5) (TestCase $ assertEqual "" (Just (27)) (getExprRes
 
 
 multiplicationTestCases = TestList [m1, m2, m3, m4, m5]
-tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases, multiplicationTestCases]
+
+
+-- Division Test Caes
+
+dTestLabel ::  Integer ->  String
+dTestLabel num =  "Division Test " ++ show num
+
+d1 = TestLabel (dTestLabel 1) (TestCase $ assertEqual "" (Just 2) (getExprResult "10/5") )
+d2 = TestLabel (dTestLabel 2) (TestCase $ assertEqual "" (Just 11) (getExprResult "10/5*4+3") )
+
+d3 = TestLabel (dTestLabel 3) (TestCase $ assertEqual "" (Just 10) (getExprResult "5+10/2") )
+
+d4 = TestLabel (dTestLabel 4) (TestCase $ assertEqual "" (Just 5) (getExprResult "20/2/2") )
+
+d5 = TestLabel (dTestLabel 5) (TestCase $ assertEqual "" (Just 2) (getExprResult "20/10*2-5+3") )
+
+d6 = TestLabel (dTestLabel 6) (TestCase $ assertEqual "" (Just 2) (getExprResult "11/2 - 3") )
+
+d7 = TestLabel (dTestLabel 7) (TestCase $ assertEqual "" (Just 20) (getExprResult "100/(10/2)") )
+
+
+d8 = TestLabel (dTestLabel 7) (TestCase $ assertEqual "" (Just 78) (getExprResult "100/(10/2)*4+3-(2+3)"))
+
+divisionTestCases = TestList [d1, d2, d3, d4, d5, d6, d7, d8]
+
+tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases, 
+                                    multiplicationTestCases, divisionTestCases]
 
 main = defaultMain tests
 
