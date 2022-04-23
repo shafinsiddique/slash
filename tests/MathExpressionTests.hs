@@ -37,12 +37,16 @@ evaluateExpression (Just (Multiplication left right)) = mulMaybes
 evaluateExpression (Just (Division left right)) = divMaybes (evaluateExpression (Just left))       
                                                             (evaluateExpression (Just right))
 
-
 additionTestLabel :: Integer -> String
 additionTestLabel num = "Addition Test " ++ show num
 
 getExprResult :: String -> Maybe Integer
 getExprResult input = evaluateExpression(maybeParsingResult (runParser mathExpressionParser input))
+
+getExprResult2 :: String -> Maybe Float 
+getExprResult2 input = case maybeParsingResult(runParser mathExpressionParser input) of
+                    (Just (FloatExpr val)) -> Just val
+                    _ -> Nothing
 
 a1 = TestLabel (additionTestLabel 1) (TestCase $ assertEqual "" (getExprResult "2 + 2") (Just 4))
 a2 = TestLabel (additionTestLabel 2) (TestCase $ assertEqual "" (getExprResult "100+100") (Just 200))
@@ -124,8 +128,21 @@ d8 = TestLabel (dTestLabel 7) (TestCase $ assertEqual "" (Just 78) (getExprResul
 
 divisionTestCases = TestList [d1, d2, d3, d4, d5, d6, d7, d8]
 
+-- FLOAT TEST CASES
+fTestLabel ::  Integer ->  String
+fTestLabel num =  "Float Tests " ++ show num
+
+f1 = TestLabel (fTestLabel 1) (TestCase $ assertEqual "" (Just 2.5) (getExprResult2 "2.5") )
+f2 = TestLabel (fTestLabel 2) (TestCase $ assertEqual "" (Just 69.5) (getExprResult2 "69.5") )
+
+f3 = TestLabel (fTestLabel 2) (TestCase $ assertEqual "" (Just 789.234) (getExprResult2 "789.234") )
+
+
+floatTestCases = TestList [f1, f2, f3]
+
 tests = hUnitTestToTests $ TestList [additionTestCases, subtractionTestCases, 
-                                    multiplicationTestCases, divisionTestCases]
+                                    multiplicationTestCases, divisionTestCases, floatTestCases]
+
 
 main = defaultMain tests
 

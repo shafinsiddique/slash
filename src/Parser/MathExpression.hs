@@ -1,7 +1,8 @@
 module Parser.MathExpression (mathExpressionParser) where
-import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division, EmptyExpr))
+import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division))
 import Parser.Combinator
 import Parser.IntegerExpression
+import Parser.FloatExpression
 import Control.Arrow (ArrowChoice(right))
 import GHC.IO.Buffer (charSize)
 import Control.Concurrent (signalQSemN)
@@ -11,7 +12,8 @@ parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' 
 
 expressionStartParser :: Parser Expression
 expressionStartParser = (\_ -> (\y -> (\_ -> y))) <$> spaceParser
-                        <*> anyOf [parenthesisExpressionParser, integerExpressionParser]
+                        <*> anyOf [parenthesisExpressionParser, floatExpressionParser,                 
+                                        integerExpressionParser]
                         <*> spaceParser
 
 

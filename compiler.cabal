@@ -30,6 +30,7 @@ library internal-lib
         Parser.IntegerExpression
         Parser.MathExpression
         Parser.ProgramNode
+        Parser.FloatExpression
     
     build-depends:
         base ^>=4.14.3.0

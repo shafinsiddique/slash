@@ -1,6 +1,6 @@
 module Parser.IntegerExpression
 (
-    integerExpressionParser
+    integerExpressionParser, positiveIntegerParser
 ) where
 
 import Parser.ProgramNode (Expression(IntExpr))
