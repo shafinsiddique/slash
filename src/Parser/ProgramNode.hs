@@ -8,7 +8,7 @@ module Parser.ProgramNode
 -- something is an expression.
 data Expression = IntExpr Integer | FloatExpr Float| Addition Expression Expression 
                 | Subtraction Expression Expression
-                | Multiplication Expression Expression | Division Expression Expression 
+                | Multiplication Expression Expression | Division Expression Expression | StringExpr String
                 deriving Show
                 
 
