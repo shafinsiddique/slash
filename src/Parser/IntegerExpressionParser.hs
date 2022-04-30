@@ -1,4 +1,4 @@
-module Parser.IntegerExpression
+module Parser.IntegerExpressionParser
 (
     integerExpressionParser, positiveIntegerParser
 ) where

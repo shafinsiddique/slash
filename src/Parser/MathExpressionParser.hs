@@ -1,8 +1,8 @@
-module Parser.MathExpression (mathExpressionParser) where
+module Parser.MathExpressionParser (mathExpressionParser) where
 import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division))
 import Parser.Combinator
-import Parser.IntegerExpression
-import Parser.FloatExpression
+import Parser.IntegerExpressionParser
+import Parser.FloatExpressionParser
 import Control.Arrow (ArrowChoice(right))
 import GHC.IO.Buffer (charSize)
 import Control.Concurrent (signalQSemN)

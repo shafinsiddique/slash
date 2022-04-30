@@ -1,4 +1,4 @@
-module Parser.StringExpression 
+module Parser.StringExpressionParser 
 (
     stringParser
 ) where

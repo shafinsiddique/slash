@@ -1,8 +1,8 @@
-module Parser.FloatExpression where
+module Parser.FloatExpressionParser where
 
 import Parser.Combinator
 
-import Parser.IntegerExpression(integerExpressionParser, positiveIntegerParser)
+import Parser.IntegerExpressionParser(integerExpressionParser, positiveIntegerParser)
 import Parser.ProgramNode (Expression(IntExpr, FloatExpr))
 
 handleFloatParser :: Expression -> Char -> Integer -> Expression 

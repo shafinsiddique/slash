@@ -1,4 +1,4 @@
-module Parser.Expression
+module Parser.ExpressionParser
 (
     expressionParser,
 
@@ -6,9 +6,9 @@ module Parser.Expression
 
 import Parser.Combinator ( Parser, anyOf )
 import Parser.ProgramNode (Expression(..))
-import Parser.IntegerExpression
-import Parser.MathExpression (mathExpressionParser)
-import Parser.StringExpression (stringParser)
+import Parser.IntegerExpressionParser
+import Parser.MathExpressionParser (mathExpressionParser)
+import Parser.StringExpressionParser (stringParser)
 
 expressionParser :: Parser Expression
 expressionParser = anyOf [stringParser, mathExpressionParser]
