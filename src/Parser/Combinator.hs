@@ -13,9 +13,11 @@ module Parser.Combinator
     spaceParser,
     maybeParsingResult,
     zeroOrMoreOnCondition,
+    wordParser,
 ) where
 
 import Data.Char ( digitToInt, intToDigit )
+import GHC.IO.Handle (NewlineMode(inputNL))
 
 data ParsingResult a = ParsingSuccess a String | ParsingError String deriving Show
 
@@ -106,6 +108,12 @@ conditionParser f = Parser (\input -> case input of
 zeroOrMoreOnCondition :: (Char -> Bool) -> Parser [Char]
 zeroOrMoreOnCondition f = zeroOrMore (conditionParser f)
 
+wordParser :: String -> Parser String
+wordParser word = Parser (\input -> case input of
+                                    [] -> ParsingSuccess word input
+                                    x:xs -> case runParser (charParser x) input of
+                                            ParsingSuccess _ rest -> runParser (wordParser xs) rest
+                                            ParsingError e -> ParsingError "Could not match word")
 
 maybeParsingResult :: ParsingResult a -> Maybe a
 maybeParsingResult (ParsingSuccess val rest) = Just val

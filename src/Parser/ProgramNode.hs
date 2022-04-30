@@ -1,6 +1,7 @@
 module Parser.ProgramNode 
 (
-    Expression (..)
+    Expression (..),
+    Statement(..)
 ) where
 
 -- | A program node is either an expression or a statement. Use this parser to check whether something in the
@@ -11,5 +12,8 @@ data Expression = IntExpr Integer | FloatExpr Float| Addition Expression Express
                 | Multiplication Expression Expression | Division Expression Expression 
                 | StringExpr String
                 deriving Show
+
+
+data Statement = PrintStatement Expression deriving Show
                 
 

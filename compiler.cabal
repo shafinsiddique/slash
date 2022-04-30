@@ -32,6 +32,7 @@ library internal-lib
         Parser.ProgramNode
         Parser.FloatExpressionParser
         Parser.StringExpressionParser
+        Parser.PrintStatementParser
     
     build-depends:
         base ^>=4.14.3.0
