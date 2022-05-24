@@ -1,5 +1,6 @@
 module Main where
 import Parser.Combinator
-import Parser.Expression ( expressionParser )
-
-main = print (runParser expressionParser "4.52349")
+import Parser.ExpressionParser ( expressionParser )
+import Parser.StatementParser ( statementParser )
+import Parser.PrintStatementParser (printWordParser, printStatementParser)
+main = print (runParser printStatementParser "println(\"hello\")")

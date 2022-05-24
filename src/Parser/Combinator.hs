@@ -14,6 +14,8 @@ module Parser.Combinator
     maybeParsingResult,
     zeroOrMoreOnCondition,
     wordParser,
+    Parser.Combinator.sequence,
+
 ) where
 
 import Data.Char ( digitToInt, intToDigit )
@@ -108,12 +110,23 @@ conditionParser f = Parser (\input -> case input of
 zeroOrMoreOnCondition :: (Char -> Bool) -> Parser [Char]
 zeroOrMoreOnCondition f = zeroOrMore (conditionParser f)
 
+-- | Take in a  list of parsers, only return ParsingSuccess if all the parsers succeed one after 
+-- another. 
+
+_sequence :: [Parser a] -> [a] -> Parser [a]
+_sequence [] vals = Parser (\input -> ParsingSuccess vals input)
+_sequence (x:xs) vals = Parser (\input -> case (runParser x input) of 
+                                        ParsingError e -> ParsingError e 
+                                        ParsingSuccess val rest -> 
+                                                    case (runParser (_sequence xs vals) rest) of 
+                                                    ParsingSuccess vals rest -> ParsingSuccess (val:vals) rest
+                                                    err -> err) 
+
+sequence :: [Parser a] -> Parser [a]
+sequence parsers = _sequence parsers []
+
 wordParser :: String -> Parser String
-wordParser word = Parser (\input -> case input of
-                                    [] -> ParsingSuccess word input
-                                    x:xs -> case runParser (charParser x) input of
-                                            ParsingSuccess _ rest -> runParser (wordParser xs) rest
-                                            ParsingError e -> ParsingError "Could not match word")
+wordParser word = Parser.Combinator.sequence (map charParser word)
 
 maybeParsingResult :: ParsingResult a -> Maybe a
 maybeParsingResult (ParsingSuccess val rest) = Just val

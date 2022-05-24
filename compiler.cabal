@@ -33,6 +33,7 @@ library internal-lib
         Parser.FloatExpressionParser
         Parser.StringExpressionParser
         Parser.PrintStatementParser
+        Parser.StatementParser
     
     build-depends:
         base ^>=4.14.3.0
