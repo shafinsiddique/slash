@@ -1,6 +1,6 @@
 module Parser.PrintStatementParser 
 (
-    printStatementParser, printWordParser
+    printStatementParser,
 ) where
 
 import Parser.Combinator
@@ -16,8 +16,6 @@ printStatementParser = handlePrintStatementParser <$> wordParser "println"
                     <*> expressionParser 
                     <*> charParser ')' 
 
-printWordParser :: Parser String
-printWordParser = wordParser "println"
 --- TODO : handle spacing.
 
 

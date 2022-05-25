@@ -14,6 +14,7 @@ module Parser.Combinator
     maybeParsingResult,
     zeroOrMoreOnCondition,
     wordParser,
+    spaceAndNewlineParser,
     Parser.Combinator.sequence,
 
 ) where
@@ -101,6 +102,11 @@ spaceParser :: Parser Char
 spaceParser = Parser (\input -> case (runParser (zeroOrMore (charParser ' ')) input) of
                                 ParsingSuccess l rest -> ParsingSuccess ' ' rest)
 
+spaceAndNewlineParser :: Parser Char
+spaceAndNewlineParser = Parser (\input -> case (runParser 
+                                    (zeroOrMore (anyOf [charParser ' ', charParser '\n'])) input) of
+                                        ParsingSuccess l rest -> ParsingSuccess ' ' rest)
+
 conditionParser :: (Char -> Bool) -> Parser Char
 conditionParser f = Parser (\input -> case input of
                                         x:xs -> if f x then ParsingSuccess x xs
@@ -110,7 +116,7 @@ conditionParser f = Parser (\input -> case input of
 zeroOrMoreOnCondition :: (Char -> Bool) -> Parser [Char]
 zeroOrMoreOnCondition f = zeroOrMore (conditionParser f)
 
--- | Take in a  list of parsers, only return ParsingSuccess if all the parsers succeed one after 
+-- | Take in a list of parsers, only return ParsingSuccess if all the parsers succeed one after 
 -- another. 
 
 _sequence :: [Parser a] -> [a] -> Parser [a]
