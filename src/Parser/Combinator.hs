@@ -15,6 +15,7 @@ module Parser.Combinator
     zeroOrMoreOnCondition,
     wordParser,
     spaceAndNewlineParser,
+    wordParserWithSpace,
     Parser.Combinator.sequence,
 
 ) where
@@ -133,6 +134,10 @@ sequence parsers = _sequence parsers []
 
 wordParser :: String -> Parser String
 wordParser word = Parser.Combinator.sequence (map charParser word)
+
+wordParserWithSpace :: String -> Parser String
+wordParserWithSpace word = (\_ -> (\y -> (\_ -> y))) 
+                            <$> spaceParser <*> wordParser word <*> spaceParser
 
 maybeParsingResult :: ParsingResult a -> Maybe a
 maybeParsingResult (ParsingSuccess val rest) = Just val

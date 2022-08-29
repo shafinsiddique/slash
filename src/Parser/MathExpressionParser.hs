@@ -41,13 +41,6 @@ binaryExpressionParser sign = handleBinaryExpression <$> expressionStartParser
                             <*> charParser sign
                             <*> expressionStartParser
 
--- rightRecursiveParser :: Expression -> [Char] -> Parser Expression
--- rightRecursiveParser left equalPrecedenceSigns = 
-
--- additionParser2 :: Parser Expression
--- additionParser2 = Parser (\input-> case runParser (binaryExpressionParser '+') input of
---                                 ParsingSuccess val rest -> ParsingSuccess val rest
---                                 ParsingError e -> ParsingError e)
 
 anyBinaryExpressionParser :: [Char] -> Parser Expression
 anyBinaryExpressionParser signs = anyOf (map binaryExpressionParser signs)

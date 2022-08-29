@@ -34,7 +34,8 @@ library internal-lib
         Parser.StringExpressionParser
         Parser.PrintStatementParser
         Parser.StatementParser
-    
+        Parser.VariableNameParser
+        
     build-depends:
         base ^>=4.14.3.0
 
