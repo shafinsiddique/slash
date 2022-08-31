@@ -16,6 +16,7 @@ module Parser.Combinator
     wordParser,
     spaceAndNewlineParser,
     wordParserWithSpace,
+    ifAndParser,
     Parser.Combinator.sequence,
 
 ) where
@@ -37,9 +38,16 @@ instance Functor Parser where
 
 instance Applicative Parser where
     pure a = Parser (\input -> ParsingSuccess a input)
-    p1 <*> p2 = Parser (\input -> case (runParser p1 input) of
+    p1 <*> p2 = Parser (\input -> case runParser p1 input of
                                   ParsingError e -> ParsingError e
                                   ParsingSuccess f rest -> runParser (fmap f p2) rest)
+
+instance Monad Parser where
+    p1 >>= f = Parser (\input -> case runParser p1 input of
+                                ParsingError e -> ParsingError e
+                                ParsingSuccess value rest -> runParser (f value) rest)
+
+    return value = Parser (\input -> ParsingSuccess value input)
 
 -- | Take in a character 'c' and return our most primitive parser. The returned parser is a function that takes in an input and returns a ParsingSuccess if the first character in the input is the character 'c'.
 -- Todo : Fix error messaging.
@@ -104,7 +112,7 @@ spaceParser = Parser (\input -> case (runParser (zeroOrMore (charParser ' ')) in
                                 ParsingSuccess l rest -> ParsingSuccess ' ' rest)
 
 spaceAndNewlineParser :: Parser Char
-spaceAndNewlineParser = Parser (\input -> case (runParser 
+spaceAndNewlineParser = Parser (\input -> case (runParser
                                     (zeroOrMore (anyOf [charParser ' ', charParser '\n'])) input) of
                                         ParsingSuccess l rest -> ParsingSuccess ' ' rest)
 
@@ -122,12 +130,12 @@ zeroOrMoreOnCondition f = zeroOrMore (conditionParser f)
 
 _sequence :: [Parser a] -> [a] -> Parser [a]
 _sequence [] vals = Parser (\input -> ParsingSuccess vals input)
-_sequence (x:xs) vals = Parser (\input -> case (runParser x input) of 
-                                        ParsingError e -> ParsingError e 
-                                        ParsingSuccess val rest -> 
-                                                    case (runParser (_sequence xs vals) rest) of 
+_sequence (x:xs) vals = Parser (\input -> case (runParser x input) of
+                                        ParsingError e -> ParsingError e
+                                        ParsingSuccess val rest ->
+                                                    case (runParser (_sequence xs vals) rest) of
                                                     ParsingSuccess vals rest -> ParsingSuccess (val:vals) rest
-                                                    err -> err) 
+                                                    err -> err)
 
 sequence :: [Parser a] -> Parser [a]
 sequence parsers = _sequence parsers []
@@ -136,8 +144,16 @@ wordParser :: String -> Parser String
 wordParser word = Parser.Combinator.sequence (map charParser word)
 
 wordParserWithSpace :: String -> Parser String
-wordParserWithSpace word = (\_ -> (\y -> (\_ -> y))) 
+wordParserWithSpace word = (\_ -> (\y -> (\_ -> y)))
                             <$> spaceParser <*> wordParser word <*> spaceParser
+
+
+ifAndParser :: Parser String
+ifAndParser = do {
+    if_word <- wordParser "if";
+    and_word <- wordParser "and";
+    return if_word
+}
 
 maybeParsingResult :: ParsingResult a -> Maybe a
 maybeParsingResult (ParsingSuccess val rest) = Just val
