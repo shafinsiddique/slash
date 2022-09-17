@@ -32,10 +32,10 @@ library internal-lib
         Parser.ProgramNode
         Parser.FloatExpressionParser
         Parser.StringExpressionParser
-        Parser.PrintStatementParser
-        Parser.StatementParser
         Parser.VariableNameParser
-        
+        Parser.PrintStatementParser
+        Generator.Generator
+        Generator.X86Assembly
     build-depends:
         base ^>=4.14.3.0
 

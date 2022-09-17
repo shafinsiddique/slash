@@ -4,12 +4,13 @@ module Parser.ExpressionParser
 
 ) where
 
-import Parser.Combinator
+import Parser.Combinator 
 import Parser.ProgramNode (Expression(..))
 import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser)
 import Parser.VariableNameParser(variableNameParser)
+import Parser.PrintStatementParser(printStatementParser)
 
 
 handleLetExpression :: String -> String -> Char -> Expression -> String -> Expression -> Expression
@@ -27,5 +28,5 @@ letExpressionParser = handleLetExpression
 
 expressionParser :: Parser Expression
 expressionParser = (\_ -> (\y -> (\_ -> y))) <$> spaceAndNewlineParser 
-                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser]
+                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printStatementParser]
                 <*> spaceAndNewlineParser
