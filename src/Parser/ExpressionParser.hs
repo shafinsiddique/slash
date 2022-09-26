@@ -1,6 +1,7 @@
 module Parser.ExpressionParser
 (
     expressionParser,
+    printExpressionParser
 
 ) where
 
@@ -10,7 +11,6 @@ import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser)
 import Parser.VariableNameParser(variableNameParser)
-import Parser.PrintStatementParser(printStatementParser)
 
 
 handleLetExpression :: String -> String -> Char -> Expression -> String -> Expression -> Expression
@@ -26,7 +26,18 @@ letExpressionParser = handleLetExpression
                 <*> wordParserWithSpace "in" 
                 <*> expressionParser
 
+handlePrintStatementParser :: String -> Char -> Expression -> Char -> Expression 
+handlePrintStatementParser _ _ (StringExpr str) _ = PrintExpr {toPrint = str}
+
+--- TODO : handle spacing.
+
+printExpressionParser :: Parser Expression
+printExpressionParser = handlePrintStatementParser <$> wordParser "println" 
+                    <*> charParser '(' 
+                    <*> stringParser  
+                    <*> charParser ')' 
+
 expressionParser :: Parser Expression
 expressionParser = (\_ -> (\y -> (\_ -> y))) <$> spaceAndNewlineParser 
-                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printStatementParser]
+                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser]
                 <*> spaceAndNewlineParser
