@@ -11,38 +11,26 @@ _main:                                  ## @main
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 	subq	$32, %rsp
-	leaq	-20(%rbp), %rsi
-	movq	___stack_chk_guard@GOTPCREL(%rip), %rax
-	movq	(%rax), %rax
-	movq	%rax, -8(%rbp)
-	movl	$0, -24(%rbp)
-	movq	L___const.main.greeting(%rip), %rax
-	movq	%rax, -20(%rbp)
-	movl	L___const.main.greeting+8(%rip), %ecx
-	movl	%ecx, -12(%rbp)
+	movl	$0, -4(%rbp)
+	movl	$0, -8(%rbp)
+	movl	$1, -12(%rbp)
+	movl	-8(%rbp), %eax
+	addl	$1, %eax
+	movl	%eax, -16(%rbp)
+	movl	-16(%rbp), %esi
 	leaq	L_.str(%rip), %rdi
 	movb	$0, %al
 	callq	_printf
-	movq	___stack_chk_guard@GOTPCREL(%rip), %rdx
-	movq	(%rdx), %rdx
-	movq	-8(%rbp), %rsi
-	cmpq	%rsi, %rdx
-	jne	LBB0_2
-## %bb.1:
-	xorl	%eax, %eax
+	xorl	%ecx, %ecx
+	movl	%eax, -20(%rbp)                 ## 4-byte Spill
+	movl	%ecx, %eax
 	addq	$32, %rsp
 	popq	%rbp
 	retq
-LBB0_2:
-	callq	___stack_chk_fail
-	ud2
 	.cfi_endproc
                                         ## -- End function
 	.section	__TEXT,__cstring,cstring_literals
-L___const.main.greeting:                ## @__const.main.greeting
-	.asciz	"Hello World"
-
 L_.str:                                 ## @.str
-	.asciz	"%s"
+	.asciz	"%d\n"
 
 .subsections_via_symbols

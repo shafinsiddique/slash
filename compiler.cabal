@@ -33,7 +33,6 @@ library internal-lib
         Parser.FloatExpressionParser
         Parser.StringExpressionParser
         Parser.VariableNameParser
-        Parser.PrintStatementParser
         Generator.Generator
         Generator.X86Assembly
     build-depends:

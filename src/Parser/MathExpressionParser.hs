@@ -24,9 +24,6 @@ getConstructorFromSign '+' = Addition
 getConstructorFromSign '*' = Multiplication
 
 
-
-
-
 getCharParsers :: [Char] -> [Parser Char]
 getCharParsers = map charParser
 
