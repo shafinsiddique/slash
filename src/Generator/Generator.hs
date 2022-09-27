@@ -23,6 +23,17 @@ getMathLeftRightAsm leftReg rightReg left right  =
                 let rightAsm = getMathExprAsm rightReg leftAsm right  in
                 rightAsm
 
+operateOn :: Expression -> Register -> Register -> Register -> X86Assembly -> X86Assembly
+operateOn expr left right destination existing = 
+    let moveInstr = MOV destination (show left) in 
+    let instruction = (case expr of 
+                        Addition _ _ -> [Add left right, moveInstr ]
+                        Subtraction _ _ -> [Sub left right, moveInstr]
+                        Multiplication _ _ -> [IMul left right, moveInstr]
+                        _ -> []) in
+    addCodeSection existing instruction 
+
+    
 getMathExprAsm :: Register -> X86Assembly -> Expression -> X86Assembly
 getMathExprAsm register existing expr  =
                 let leftReg = RDI in
@@ -36,7 +47,7 @@ getMathExprAsm register existing expr  =
                         Multiplication left right -> helper left right
                         Division left right -> helper left right
                         _ -> existing) in 
-                mergeAsm existing asm 
+                mergeAsm existing (operateOn expr leftReg rightReg register asm)
 
 
 generateX86 :: Expression -> Register -> X86Assembly

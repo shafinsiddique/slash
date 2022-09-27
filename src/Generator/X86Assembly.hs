@@ -16,7 +16,7 @@ data X86Data = X86Data {variableName :: String, value :: String, end :: Integer}
 
 data X86Instruction = MOV Register String | Call String | 
         Extern String | Global String | Default String | StringPair String String 
-        | Add Register Register 
+        | Add Register Register | Sub Register Register | IMul Register Register 
         
 
 instance Show X86Instruction where
@@ -39,3 +39,5 @@ getDefaultX86Asm :: X86Assembly
 getDefaultX86Asm = X86Assembly {codeSection = [], dataSection = []}
 
 addCodeSection :: X86Assembly -> [X86Instruction] -> X86Assembly
+addCodeSection existing codeSection = mergeAsm existing (X86Assembly 
+                                                {dataSection = [], codeSection = codeSection})
