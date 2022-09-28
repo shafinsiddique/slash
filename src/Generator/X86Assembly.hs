@@ -14,12 +14,12 @@ instance Show Register where
     show R8 = "r8"
     show R9 = "r9"
 
-data X86Data = X86Data {variableName :: String, value :: String, end :: Integer} deriving Show
-
 data X86Instruction = MOV Register String | CALL String |
         Extern String | Global String | Default String | StringPair String String
         | ADD Register Register | SUB Register Register | IMUL Register Register
         | PUSH Register | POP Register | TextSection | DataSection | RET | StartMain
+        | MOVR Register Register
+        | X86Data String String Integer
 
 
 instance Show X86Instruction where
@@ -38,8 +38,11 @@ instance Show X86Instruction where
     show DataSection = "section .data"
     show RET = "ret"
     show StartMain = "_main:"
+    show (MOVR reg1 reg2) = printf "mov %s, %s" (show reg1) (show reg2)
+    show (X86Data name value end) = printf "%s: db \"%s\", %d" name value end
 
-data X86Assembly = X86Assembly {codeSection :: [X86Instruction], dataSection :: [X86Data] } deriving Show
+data X86Assembly = X86Assembly {codeSection :: [X86Instruction], dataSection :: [X86Instruction] } 
+                                                deriving Show
 
 mergeAsm :: X86Assembly -> X86Assembly -> X86Assembly
 mergeAsm X86Assembly {codeSection = codeSectionOld, dataSection = dataSectionOld}
@@ -52,3 +55,7 @@ getEmptyX86Asm = X86Assembly {codeSection = [], dataSection = []}
 addCodeSection :: X86Assembly -> [X86Instruction] -> X86Assembly
 addCodeSection existing codeSection = mergeAsm existing (X86Assembly
                                                 {dataSection = [], codeSection = codeSection})
+
+addDataSection :: X86Assembly -> [X86Instruction] -> X86Assembly
+addDataSection existing dataSection = mergeAsm existing (X86Assembly
+                                                {dataSection = dataSection, codeSection = []})

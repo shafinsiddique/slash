@@ -5,11 +5,11 @@ import Parser.StringExpressionParser(stringParser)
 import Parser.MathExpressionParser(mathExpressionParser)
 
 import Generator.X86Assembly
-    ( X86Assembly(X86Assembly, codeSection), mergeAsm )
+    ( X86Assembly(X86Assembly, codeSection, dataSection), mergeAsm )
 import Generator.Generator ( generateX86, getInitialAsm, getEndingAsm )
 
 getAsm :: Maybe X86Assembly
-getAsm = let parsingResult = runParser mathExpressionParser "2 + (2*3) + 8 + 9" in 
+getAsm = let parsingResult = runParser printExpressionParser "println(2+2+2)" in 
     let initialAsm = getInitialAsm in
     let middle = (case parsingResult of  
                     ParsingSuccess node rest -> Just 
@@ -18,5 +18,6 @@ getAsm = let parsingResult = runParser mathExpressionParser "2 + (2*3) + 8 + 9" 
     middle
         
 main = case getAsm of 
-    Just X86Assembly {codeSection = codeSection} -> mapM_ print codeSection
+    Just X86Assembly {codeSection = codeSection, dataSection = dataSection} -> 
+                                                        mapM_ print (codeSection ++ dataSection)
     Nothing -> print ""

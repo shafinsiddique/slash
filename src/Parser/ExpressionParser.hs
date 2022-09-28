@@ -27,14 +27,14 @@ letExpressionParser = handleLetExpression
                 <*> expressionParser
 
 handlePrintStatementParser :: String -> Char -> Expression -> Char -> Expression 
-handlePrintStatementParser _ _ (StringExpr str) _ = PrintExpr {toPrint = str}
+handlePrintStatementParser _ _ expr _ = PrintExpr {toPrint = expr}
 
 --- TODO : handle spacing.
 
 printExpressionParser :: Parser Expression
 printExpressionParser = handlePrintStatementParser <$> wordParser "println" 
                     <*> charParser '(' 
-                    <*> stringParser  
+                    <*> expressionParser  
                     <*> charParser ')' 
 
 expressionParser :: Parser Expression
