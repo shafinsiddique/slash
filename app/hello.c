@@ -1,9 +1,17 @@
 #include <stdio.h>
 
 int main() {
-    int x = 0;
-    int y = 1;
-    int sum = x+1;
-    printf ("%d\n", sum);
+
+    printf ("%d\n", (4+8*3));
     return 0;
 }
+
+/*
+
+Calculate left, push it onto stack.
+Calculate right, it gets stored in right register.
+
+
+
+
+*/
