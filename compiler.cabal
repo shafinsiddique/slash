@@ -35,8 +35,11 @@ library internal-lib
         Parser.VariableNameParser
         Generator.Generator
         Generator.X86Assembly
+        Generator.SymbolTable
+        Generator.ProgramState
     build-depends:
         base ^>=4.14.3.0
+        ,containers
 
     hs-source-dirs: 
         src

@@ -3,8 +3,9 @@ module Generator.X86Assembly where
 
 import Foreign (touchForeignPtr)
 import Text.Printf
+import Generator.SymbolTable
 
-data Register = RDI | RSI | RBP | RAX | R8 | R9
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP
 
 instance Show Register where
     show RDI = "rdi"
@@ -13,6 +14,7 @@ instance Show Register where
     show RAX = "rax"
     show R8 = "r8"
     show R9 = "r9"
+    show RSP = "rsp"
 
 data X86Instruction = MOV Register String | CALL String |
         Extern String | Global String | Default String | StringPair String String
@@ -20,6 +22,9 @@ data X86Instruction = MOV Register String | CALL String |
         | PUSH Register | POP Register | TextSection | DataSection | RET | StartMain
         | MOVR Register Register
         | X86Data String String Integer
+        | MOVToMem Register Int Register
+        | SUBI Register Integer
+        | ADDI Register Integer 
 
 
 instance Show X86Instruction where
@@ -40,9 +45,12 @@ instance Show X86Instruction where
     show StartMain = "_main:"
     show (MOVR reg1 reg2) = printf "mov %s, %s" (show reg1) (show reg2)
     show (X86Data name value end) = printf "%s: db \"%s\", %d" name value end
+    show (MOVToMem dest offset reg) = printf "mov [%s-(8*%d)], %s" (show dest) offset (show reg)
+    show (SUBI reg value) = printf "sub %s, %d" (show reg) value
+    show (ADDI reg value) = printf "add %s, %d" (show reg) value
 
-data X86Assembly = X86Assembly {codeSection :: [X86Instruction], dataSection :: [X86Instruction] } 
-                                                deriving Show
+data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
+                    dataSection :: [X86Instruction] } deriving Show
 
 mergeAsm :: X86Assembly -> X86Assembly -> X86Assembly
 mergeAsm X86Assembly {codeSection = codeSectionOld, dataSection = dataSectionOld}
@@ -59,3 +67,4 @@ addCodeSection existing codeSection = mergeAsm existing (X86Assembly
 addDataSection :: X86Assembly -> [X86Instruction] -> X86Assembly
 addDataSection existing dataSection = mergeAsm existing (X86Assembly
                                                 {dataSection = dataSection, codeSection = []})
+

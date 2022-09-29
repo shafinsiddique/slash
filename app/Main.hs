@@ -1,6 +1,6 @@
 module Main where
 import Parser.Combinator
-import Parser.ExpressionParser ( expressionParser, printExpressionParser )
+import Parser.ExpressionParser ( expressionParser, printExpressionParser, letExpressionParser )
 import Parser.StringExpressionParser(stringParser)
 import Parser.MathExpressionParser(mathExpressionParser)
 
@@ -9,7 +9,7 @@ import Generator.X86Assembly
 import Generator.Generator ( generateX86, getInitialAsm, getEndingAsm )
 
 getAsm :: Maybe X86Assembly
-getAsm = let parsingResult = runParser printExpressionParser "println(2+2+(2*4))" in 
+getAsm = let parsingResult = runParser letExpressionParser "let x = (2 + 2) in println(\"hello\")" in 
     let initialAsm = getInitialAsm in
     let middle = (case parsingResult of  
                     ParsingSuccess node rest -> Just 

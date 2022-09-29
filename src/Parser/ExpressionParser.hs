@@ -1,7 +1,8 @@
 module Parser.ExpressionParser
 (
     expressionParser,
-    printExpressionParser
+    printExpressionParser,
+    letExpressionParser
 
 ) where
 
