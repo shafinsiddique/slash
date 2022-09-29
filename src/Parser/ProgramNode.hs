@@ -11,7 +11,7 @@ data Expression = IntExpr Integer | FloatExpr Float| Addition Expression Express
                 | Subtraction Expression Expression
                 | Multiplication Expression Expression | Division Expression Expression 
                 | StringExpr String
-                | LetExpr { varName :: String, varExpr :: Expression, expr :: Expression}
+                | LetExpr String Expression Expression
                 | PrintExpr { toPrint :: Expression } 
                 
                 deriving Show

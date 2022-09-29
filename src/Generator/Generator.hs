@@ -94,7 +94,22 @@ generateX86 expression oldAsm =
                 _ -> oldAsm)
         in mergeAsm oldAsm newAsm
 
--- how is this gonna work?
--- We pass in the register where it must be stored.
--- Given that register, it simply stores it in that register. That's it.
+-- Next Steps : 
+-- -- Let In working, parse entire source files rather than snippets, Actually generate code, 
 
+{-
+
+How would I represent symbol tables,
+
+it is a dictionary.
+
+Every function will have it's own. 
+
+When we create a function, we get the functions asm, the symbol table is for that function. 
+
+So every function we created will get passed a symbol table. 
+
+For now, let's just have it a part of our assembly syntax. 
+
+
+-}

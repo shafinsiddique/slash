@@ -9,7 +9,7 @@ import Generator.X86Assembly
 import Generator.Generator ( generateX86, getInitialAsm, getEndingAsm )
 
 getAsm :: Maybe X86Assembly
-getAsm = let parsingResult = runParser printExpressionParser "println(2+2+2)" in 
+getAsm = let parsingResult = runParser printExpressionParser "println(2+2+(2*4))" in 
     let initialAsm = getInitialAsm in
     let middle = (case parsingResult of  
                     ParsingSuccess node rest -> Just 
