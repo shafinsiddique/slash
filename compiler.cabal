@@ -33,6 +33,7 @@ library internal-lib
         Parser.FloatExpressionParser
         Parser.StringExpressionParser
         Parser.VariableNameParser
+        Parser.ReturnType
         Generator.Generator
         Generator.X86Assembly
         Generator.SymbolTable

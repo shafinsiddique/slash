@@ -1,9 +1,12 @@
 module Generator.SymbolTable where
 import Data.Map
+import Parser.ReturnType
 
-type SymbolTable = Map String Int
+data VariableInfo = VariableInfo Int ReturnType
 
-addSymbolToTable :: SymbolTable -> String -> Int -> SymbolTable
+type SymbolTable = Map String VariableInfo
+
+addSymbolToTable :: SymbolTable -> String -> VariableInfo -> SymbolTable
 addSymbolToTable table key value = Data.Map.insert key value table
 
 getNewId :: SymbolTable -> Int 
@@ -18,5 +21,5 @@ exists = Data.Map.member
 getSize :: SymbolTable -> Integer 
 getSize table = toInteger (length (toList table))
 
-findSymbol :: SymbolTable -> String -> Maybe Int 
+findSymbol :: SymbolTable -> String -> Maybe VariableInfo 
 findSymbol table key = Data.Map.lookup key table 

@@ -5,6 +5,7 @@ import Generator.SymbolTable
 import Generator.ProgramState
 import Text.Printf
 import GHC.Generics (Constructor(conName))
+import Parser.ReturnType
 integerFormattedStringConst = "__slash_integer_format"
 
 getInitialAsm :: X86Assembly
@@ -43,6 +44,24 @@ printStr str state = let reg = R8 in
     let code = [MOVR RDI reg, CALL "_printf"]
     in (addCodeSection stringAsm code, newState)
 
+printVarBasedOnTypeAsm :: X86Assembly -> ReturnType -> Register ->  X86Assembly 
+printVarBasedOnTypeAsm asm varType reg = 
+    let callPrint = CALL "_printf" in 
+    let codeSection = case varType of
+            IntReturn -> [MOV RDI integerFormattedStringConst, MOVR RSI reg, callPrint]
+            StringReturn -> [MOVR RDI reg, callPrint]
+            _ -> []
+    in addCodeSection asm codeSection
+    
+printVariable :: String -> ProgramState -> (X86Assembly, ProgramState)
+printVariable name state = 
+    case findVariable state name of
+        Just (VariableInfo offset varType) -> 
+            let reg = R9 in 
+            let (varAsm, _) = getVariableExprAsm name reg state in 
+            (printVarBasedOnTypeAsm varAsm varType reg, state)
+        Nothing -> (getEmptyX86Asm, state)
+
 getPrintAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm expr register state  =
     case expr of
@@ -51,6 +70,7 @@ getPrintAsm expr register state  =
         Multiplication _ _ -> (printMath expr, state)
         Division _ _ -> (printMath expr, state)
         StringExpr str -> printStr str state
+        VariableExpr name -> printVariable name state
         _ -> (getEmptyX86Asm, state)
 
 getMathLeftRightAsm :: Register -> Register  -> Expression -> Expression -> X86Assembly
@@ -111,7 +131,7 @@ getMathExprAsm register expr  =
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
     case findVariable state name of
-        Just offset -> (addCodeSection getEmptyX86Asm [MOVFromMem reg offset RBP], state)
+        Just (VariableInfo offset _) -> (addCodeSection getEmptyX86Asm [MOVFromMem reg offset RBP], state)
         Nothing -> (getEmptyX86Asm, state)
 
 getLetExprAsm :: String -> Expression -> Expression -> Register -> ProgramState ->
@@ -121,7 +141,7 @@ getLetExprAsm name value expr reg state =
     let scratchRegister = R8 in
     let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
     let symbolOffset = getNewSymbolOffset valState in
-    let stateWithNewSymbol = addSymbol valState name symbolOffset in
+    let stateWithNewSymbol = addSymbol valState name (VariableInfo symbolOffset (getReturnType value)) in
     let addToStackAsm = addCodeSection valAsm [MOVToMem RBP symbolOffset scratchRegister] in
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)

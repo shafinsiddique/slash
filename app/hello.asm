@@ -13,7 +13,10 @@ pop r8
 add r8, r9
 mov r8, r8
 mov [rbp-(8*1)], r8
-mov r8, [rbp-(8*1)]
+mov r9, [rbp-(8*1)]
+mov rdi, __slash_integer_format
+mov rsi, r9
+call _printf
 add rsp, 16
 pop rbp
 mov rax, 0
