@@ -16,11 +16,14 @@ getInitialState = ProgramState getNewSymbolTable 0
 getNewSymbolOffset :: ProgramState -> Int
 getNewSymbolOffset (ProgramState table _) = getNewId table
 
-addSymbol :: ProgramState -> String -> Int -> ProgramState 
-addSymbol (ProgramState table num) name val = ProgramState (addSymbolToTable table name val) num 
+addSymbol :: ProgramState -> String -> Int -> ProgramState
+addSymbol (ProgramState table num) name val = ProgramState (addSymbolToTable table name val) num
 
-getSymbolTableSize :: ProgramState -> Integer 
+getSymbolTableSize :: ProgramState -> Integer
 getSymbolTableSize (ProgramState table _) = getSize table
+
+findVariable :: ProgramState -> String -> Maybe Int
+findVariable (ProgramState table _) = findSymbol table
 -- getState :: ProgramState -> (X86Assembly, SymbolTable)
 -- getState (asm, table) = (asm, table)
 

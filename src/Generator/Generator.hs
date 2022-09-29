@@ -9,7 +9,7 @@ integerFormattedStringConst = "__slash_integer_format"
 
 getInitialAsm :: X86Assembly
 getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", Extern "_printf",
-                                                                    StartMain, PUSH RBP, 
+                                                                    StartMain, PUSH RBP,
                                                                     MOVR RBP RSP] in
     X86Assembly {dataSection =
         [DataSection, X86Data integerFormattedStringConst "%d" 0Xa], codeSection = codeSection}
@@ -19,7 +19,7 @@ getEndingAsm :: X86Assembly
 getEndingAsm = X86Assembly {dataSection = [], codeSection = [POP RBP, MOV RAX "0", RET]}
 
 getDataConstName :: Integer -> String
-getDataConstName = printf "const_%d" 
+getDataConstName = printf "const_%d"
 
 printMath :: Expression -> X86Assembly
 printMath expr = let register = R8 in
@@ -29,10 +29,10 @@ printMath expr = let register = R8 in
 -- Add a const to the data section
 -- move the const to the register.
 getStringAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
-getStringAsm str destination state = 
+getStringAsm str destination state =
     let newState = createNewConst state in
     let newId = getConstId newState in
-    let strName = getDataConstName newId in 
+    let strName = getDataConstName newId in
     let dataSection = [X86Data strName str 0xA] in
     let codeSection = [MOV destination strName] in
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
@@ -108,16 +108,22 @@ getMathExprAsm register expr  =
 --     -- let newState = generateAsmForExpression expr (Generator.ProgramState.newState (getAsm valueAsm)         
 --     --                                                 symbolTable) scratchRegister in
 
-getLetExprAsm :: String -> Expression -> Expression -> Register -> ProgramState -> 
+getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getVariableExprAsm name reg state =
+    case findVariable state name of
+        Just offset -> (addCodeSection getEmptyX86Asm [MOVFromMem reg offset RBP], state)
+        Nothing -> (getEmptyX86Asm, state)
+
+getLetExprAsm :: String -> Expression -> Expression -> Register -> ProgramState ->
                                                                     (X86Assembly, ProgramState)
 
-getLetExprAsm name value expr reg state = 
-    let scratchRegister = R8 in 
-    let (valAsm, valState) = generateAsmForExpression value state scratchRegister in 
-    let symbolOffset = getNewSymbolOffset valState in 
-    let stateWithNewSymbol = addSymbol valState name symbolOffset in 
-    let addToStackAsm = addCodeSection valAsm [MOVToMem RBP symbolOffset scratchRegister] in 
-    let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in 
+getLetExprAsm name value expr reg state =
+    let scratchRegister = R8 in
+    let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
+    let symbolOffset = getNewSymbolOffset valState in
+    let stateWithNewSymbol = addSymbol valState name symbolOffset in
+    let addToStackAsm = addCodeSection valAsm [MOVToMem RBP symbolOffset scratchRegister] in
+    let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
 generateAsmForExpression :: Expression -> ProgramState -> Register -> (X86Assembly, ProgramState)
@@ -132,21 +138,22 @@ generateAsmForExpression expression state register =
                 Division _ _ -> (mathGenerator expression, state)
                 StringExpr value ->  getStringAsm value register state
                 LetExpr name value expr -> getLetExprAsm name value expr register state
+                VariableExpr name -> getVariableExprAsm name register state
                 _ -> (getEmptyX86Asm, state) ) in
     (newAsm, newState)
 
-getStackAllocationAsm :: Integer -> X86Assembly 
+getStackAllocationAsm :: Integer -> X86Assembly
 getStackAllocationAsm val = addCodeSection getEmptyX86Asm [SUBI RSP val]
 
-getStackCleanupAsm :: Integer -> X86Assembly 
+getStackCleanupAsm :: Integer -> X86Assembly
 getStackCleanupAsm val = addCodeSection getEmptyX86Asm [ADDI RSP val]
 
-getStackSize :: ProgramState -> Integer 
-getStackSize state = let tableSize = getSymbolTableSize state in 
-    let stackSize = (((tableSize * 8) `div` 16) + 1) * 16 in stackSize 
+getStackSize :: ProgramState -> Integer
+getStackSize state = let tableSize = getSymbolTableSize state in
+    let stackSize = (((tableSize * 8) `div` 16) + 1) * 16 in stackSize
 
-addStackAsm :: X86Assembly -> ProgramState -> X86Assembly 
-addStackAsm asm state = let stackSize = getStackSize state in 
+addStackAsm :: X86Assembly -> ProgramState -> X86Assembly
+addStackAsm asm state = let stackSize = getStackSize state in
     mergeAsm (mergeAsm (getStackAllocationAsm stackSize) asm) (getStackCleanupAsm stackSize)
 
 generateX86 :: Expression -> X86Assembly ->  X86Assembly
@@ -154,7 +161,7 @@ generateX86 expression oldAsm =
     let symbolTable = getNewSymbolTable in
     let state = getInitialState in
     let (newAsm, newState) = generateAsmForExpression expression state R8 in
-    let finalAsm = addStackAsm newAsm newState in 
+    let finalAsm = addStackAsm newAsm newState in
     mergeAsm oldAsm finalAsm
 
 -- Next Steps : 

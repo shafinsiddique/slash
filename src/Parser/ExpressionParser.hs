@@ -11,7 +11,7 @@ import Parser.ProgramNode (Expression(..))
 import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser)
-import Parser.VariableNameParser(variableNameParser)
+import Parser.VariableNameParser(variableNameParser, variableExpressionParser)
 
 
 handleLetExpression :: String -> String -> Char -> Expression -> String -> Expression -> Expression
@@ -40,5 +40,6 @@ printExpressionParser = handlePrintStatementParser <$> wordParser "println"
 
 expressionParser :: Parser Expression
 expressionParser = (\ _ y _ -> y) <$> spaceAndNewlineParser
-                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser]
+                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser, 
+                variableExpressionParser]
                 <*> spaceAndNewlineParser

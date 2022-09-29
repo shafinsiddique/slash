@@ -25,6 +25,7 @@ data X86Instruction = MOV Register String | CALL String |
         | MOVToMem Register Int Register
         | SUBI Register Integer
         | ADDI Register Integer 
+        | MOVFromMem Register Int Register
 
 
 instance Show X86Instruction where
@@ -48,6 +49,7 @@ instance Show X86Instruction where
     show (MOVToMem dest offset reg) = printf "mov [%s-(8*%d)], %s" (show dest) offset (show reg)
     show (SUBI reg value) = printf "sub %s, %d" (show reg) value
     show (ADDI reg value) = printf "add %s, %d" (show reg) value
+    show (MOVFromMem dest offset source) = printf "mov %s, [%s-(8*%d)]" (show dest) (show source) offset
 
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show

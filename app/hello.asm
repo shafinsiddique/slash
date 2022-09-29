@@ -13,13 +13,10 @@ pop r8
 add r8, r9
 mov r8, r8
 mov [rbp-(8*1)], r8
-mov r8, const_1
-mov rdi, r8
-call _printf
+mov r8, [rbp-(8*1)]
 add rsp, 16
 pop rbp
 mov rax, 0
 ret
 section .data
 __slash_integer_format: db "%d", 10
-const_1: db "hello", 10

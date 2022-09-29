@@ -18,3 +18,5 @@ exists = Data.Map.member
 getSize :: SymbolTable -> Integer 
 getSize table = toInteger (length (toList table))
 
+findSymbol :: SymbolTable -> String -> Maybe Int 
+findSymbol table key = Data.Map.lookup key table 

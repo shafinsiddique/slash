@@ -13,7 +13,7 @@ data Expression = IntExpr Integer | FloatExpr Float| Addition Expression Express
                 | StringExpr String
                 | LetExpr String Expression Expression
                 | PrintExpr { toPrint :: Expression } 
-                
+                | VariableExpr String
                 deriving Show
 
                 
