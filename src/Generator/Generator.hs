@@ -63,37 +63,37 @@ printVariable name state =
             (printVarBasedOnTypeAsm varAsm varType reg, state)
         Nothing -> (getEmptyX86Asm, state)
 
-getPrintNumAsm :: Register -> X86Assembly 
-getPrintNumAsm register = addCodeSection getEmptyX86Asm 
+getPrintNumAsm :: Register -> X86Assembly
+getPrintNumAsm register = addCodeSection getEmptyX86Asm
                     [MOV RDI integerFormattedStringConst, MOVR RSI register, CALL "_printf"]
 
-getPrintStrAsm :: Register -> X86Assembly 
-getPrintStrAsm register = addCodeSection getEmptyX86Asm 
+getPrintStrAsm :: Register -> X86Assembly
+getPrintStrAsm register = addCodeSection getEmptyX86Asm
                                             [MOVR RDI register, CALL "_printf"]
 
-getPrintVariableAsm :: Register -> String -> ProgramState -> X86Assembly 
-getPrintVariableAsm register name state = 
+getPrintVariableAsm :: Register -> String -> ProgramState -> X86Assembly
+getPrintVariableAsm register name state =
     case findVariable state name of
-        Just (VariableInfo offset varType) -> 
+        Just (VariableInfo offset varType) ->
             case varType of
                 IntReturn -> getPrintNumAsm register
                 StringReturn -> getPrintStrAsm register
-                ErrorReturn -> getEmptyX86Asm 
-        Nothing -> getEmptyX86Asm 
+                ErrorReturn -> getEmptyX86Asm
+        Nothing -> getEmptyX86Asm
 
 getPrintAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm expr register state  =
-    let (exprAsm, _) = generateAsmForExpression expr state register in 
-    let printCode = case expr of 
-                    IntExpr _ -> getPrintNumAsm register 
-                    Addition _ _ -> getPrintNumAsm register 
+    let (exprAsm, finalState) = generateAsmForExpression expr state register in
+    let printCode = case expr of
+                    IntExpr _ -> getPrintNumAsm register
+                    Addition _ _ -> getPrintNumAsm register
                     Subtraction _ _ -> getPrintNumAsm register
-                    Multiplication _ _ -> getPrintNumAsm register 
-                    StringExpr _ -> getPrintStrAsm register 
-                    VariableExpr name -> getPrintVariableAsm register name state 
+                    Multiplication _ _ -> getPrintNumAsm register
+                    StringExpr _ -> getPrintStrAsm register
+                    VariableExpr name -> getPrintVariableAsm register name state
                     BooleanOpExpr _ -> getPrintNumAsm register
-                    _ -> getEmptyX86Asm in 
-    (mergeAsm exprAsm printCode, state)
+                    _ -> getEmptyX86Asm in
+    (mergeAsm exprAsm printCode, finalState)
 
 getMathLeftRightAsm :: Register -> Register  -> Expression -> Expression -> X86Assembly
 getMathLeftRightAsm leftReg rightReg left right  =
@@ -145,21 +145,21 @@ getLetExprAsm name value expr reg state =
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
-getMathEqualityCode :: Register -> Register -> Register -> X86Assembly 
+getMathEqualityCode :: Register -> Register -> Register -> X86Assembly
 getMathEqualityCode leftReg rightReg dest = getX86Assembly [SUB leftReg rightReg, MOVR dest leftReg]
 
-getStrEqualityCode :: Register -> Register -> Register -> X86Assembly 
+getStrEqualityCode :: Register -> Register -> Register -> X86Assembly
 getStrEqualityCode leftReg rightReg dest = getX86Assembly [MOVR RDI leftReg, MOVR RSI rightReg,
                                             CALL "_strcmp", MOVR dest RAX]
 
-getEqualityCode :: Expression -> Register -> Register -> Register ->  X86Assembly 
-getEqualityCode expr leftReg rightReg dest = case expr of 
+getEqualityCode :: Expression -> Register -> Register -> Register ->  X86Assembly
+getEqualityCode expr leftReg rightReg dest = case expr of
     IntExpr _ -> getMathEqualityCode leftReg rightReg dest
     Addition _ _ -> getMathEqualityCode leftReg rightReg dest
     Subtraction _ _ -> getMathEqualityCode leftReg rightReg dest
     Multiplication _ _ -> getMathEqualityCode leftReg rightReg dest
     StringExpr _ -> getStrEqualityCode leftReg rightReg dest
-    _ -> getEmptyX86Asm 
+    _ -> getEmptyX86Asm
 
 getBooleanExprAsm :: BooleanOp -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getBooleanExprAsm expr reg state =
@@ -172,6 +172,35 @@ getBooleanExprAsm expr reg state =
     let mergedAsm = mergeAsm leftAsm rightAsm in
     let comparisonCode = getEqualityCode left leftReg rightReg reg in
     (mergeAsm mergedAsm comparisonCode, rightState)
+
+getIfExprAsm :: Expression -> Expression -> Expression -> Register -> ProgramState ->
+                                                                    (X86Assembly , ProgramState)
+
+getIfExprAsm cond thenExp elseExp reg state =
+    case cond of
+        BooleanOpExpr boolExp ->
+            (let scratchReg = R10 in
+            let (condAsm, condState) = generateAsmForExpression cond state scratchReg in
+            let newIf = createNewIf condState in
+            let ifId = getIfCounter newIf in
+            let ifBranchLabel = printf "if_branch_%d" ifId in
+            let elseBranchlabel = printf "else_branch_%d" ifId in
+            let continueBranchLabel = printf "continue_%d" ifId in 
+            let mainSectionAsm = addCodeSection condAsm [CMPRI scratchReg 0,
+                                                            JZ ifBranchLabel, JMP elseBranchlabel] in
+            let (ifBranchAsm, ifBranchState) = generateAsmForExpression thenExp newIf reg in
+            let (elseBranchAsm, finalState) = generateAsmForExpression elseExp ifBranchState reg in
+
+            let finalIf = mergeMultipleAsm [getX86Assembly [Section ifBranchLabel], ifBranchAsm, 
+                                                    getX86Assembly [JMP continueBranchLabel]] in
+
+            let finalElse = mergeMultipleAsm [getX86Assembly [Section elseBranchlabel], 
+                                            elseBranchAsm, getX86Assembly [JMP continueBranchLabel]] in
+
+            (mergeMultipleAsm [mainSectionAsm, finalIf, finalElse, getX86Assembly [Section continueBranchLabel]], finalState ))
+
+        _ -> (getEmptyX86Asm, state)
+
 
 generateAsmForExpression :: Expression -> ProgramState -> Register -> (X86Assembly, ProgramState)
 generateAsmForExpression expression state register =
@@ -187,6 +216,7 @@ generateAsmForExpression expression state register =
                 LetExpr name value expr -> getLetExprAsm name value expr register state
                 VariableExpr name -> getVariableExprAsm name register state
                 BooleanOpExpr booleanExpr -> getBooleanExprAsm booleanExpr register state
+                IfExpr cond thenExp elseExp -> getIfExprAsm cond thenExp elseExp register state
                 _ -> (getEmptyX86Asm, state) ) in
     (newAsm, newState)
 

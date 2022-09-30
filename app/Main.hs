@@ -1,6 +1,7 @@
 module Main where
 import Parser.Combinator
-import Parser.ExpressionParser ( expressionParser, printExpressionParser, letExpressionParser )
+import Parser.ExpressionParser ( expressionParser, printExpressionParser, 
+                                letExpressionParser, ifExpressionParser)
 import Parser.StringExpressionParser(stringParser)
 import Parser.MathExpressionParser(mathExpressionParser)
 
@@ -9,7 +10,7 @@ import Generator.X86Assembly
 import Generator.Generator ( generateX86, getInitialAsm, getEndingAsm )
 
 getAsm :: Maybe X86Assembly
-getAsm = let parsingResult = runParser expressionParser  "println(\"bob\" == \"sha\")" in 
+getAsm = let parsingResult = runParser ifExpressionParser   "if 2 == 5 then println(\"match\") else println(\"unmatch\")" in 
     let initialAsm = getInitialAsm in
     let middle = (case parsingResult of  
                     ParsingSuccess node rest -> Just 

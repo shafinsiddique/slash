@@ -2,7 +2,8 @@ module Parser.ExpressionParser
 (
     expressionParser,
     printExpressionParser,
-    letExpressionParser
+    letExpressionParser,
+    ifExpressionParser
 
 ) where
 
@@ -15,7 +16,7 @@ import Parser.Combinator
       wordParserWithSpace,
       Parser )
 
-import Parser.ProgramNode 
+import Parser.ProgramNode
 import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser)
@@ -56,13 +57,24 @@ getBooleanExpression :: Expression -> BooleanSign -> Expression -> Expression
 getBooleanExpression left Equality right = BooleanOpExpr (EqualityExpr left right)
 
 handleExpression :: Char -> Expression -> Maybe (BooleanSign, Expression) -> Char -> Expression
-handleExpression _ expr maybeBool _ = case maybeBool of 
+handleExpression _ expr maybeBool _ = case maybeBool of
                                     Just (sign, right) -> getBooleanExpression expr sign right
                                     Nothing -> expr
+
+handleIf :: String -> Expression -> String -> Expression -> String -> Expression -> Expression
+handleIf _ condition _ thenExp _ = IfExpr condition thenExp
+
+ifExpressionParser :: Parser Expression
+ifExpressionParser = handleIf <$> wordParserWithSpace "if"
+                    <*> expressionParser
+                    <*> wordParserWithSpace "then"
+                    <*> expressionParser
+                    <*> wordParserWithSpace "else"
+                    <*> expressionParser
 
 expressionParser :: Parser Expression
 expressionParser = handleExpression <$> spaceAndNewlineParser
                 <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser,
-                variableExpressionParser]
+                ifExpressionParser, variableExpressionParser ]
                 <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser

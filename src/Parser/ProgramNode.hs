@@ -24,6 +24,7 @@ data Expression = IntExpr Integer | FloatExpr Float| Addition Expression Express
                 | PrintExpr { toPrint :: Expression } 
                 | VariableExpr String
                 | BooleanOpExpr BooleanOp
+                | IfExpr Expression Expression Expression
                 deriving Show
 
                 

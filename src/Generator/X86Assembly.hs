@@ -28,6 +28,10 @@ data X86Instruction = MOV Register String | CALL String |
         | SUBI Register Integer
         | ADDI Register Integer
         | MOVFromMem Register Int Register
+        | CMPRI Register Integer 
+        | JZ String 
+        | JMP String 
+        | Section String
 
 
 instance Show X86Instruction where
@@ -52,6 +56,10 @@ instance Show X86Instruction where
     show (SUBI reg value) = printf "sub %s, %d" (show reg) value
     show (ADDI reg value) = printf "add %s, %d" (show reg) value
     show (MOVFromMem dest offset source) = printf "mov %s, [%s-(8*%d)]" (show dest) (show source) offset
+    show (CMPRI reg value) = printf "cmp %s, %d" (show reg) value
+    show (JZ label) = printf "jz %s" label
+    show (JMP label) = printf "jmp %s" label
+    show (Section label) = printf "%s:" label
 
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
@@ -60,6 +68,12 @@ mergeAsm :: X86Assembly -> X86Assembly -> X86Assembly
 mergeAsm X86Assembly {codeSection = codeSectionOld, dataSection = dataSectionOld}
     X86Assembly {codeSection = codeSectionNew, dataSection = dataSectionNew} = X86Assembly
         {codeSection = codeSectionOld ++ codeSectionNew, dataSection = dataSectionOld ++ dataSectionNew }
+
+getCodeSection :: X86Assembly -> [X86Instruction]
+getCodeSection X86Assembly {codeSection = codeSection} = codeSection
+
+getDataSection :: X86Assembly -> [X86Instruction]
+getDataSection X86Assembly {dataSection = dataSection} = dataSection
 
 getEmptyX86Asm :: X86Assembly
 getEmptyX86Asm = X86Assembly {codeSection = [], dataSection = []}
@@ -74,3 +88,9 @@ addDataSection existing dataSection = mergeAsm existing (X86Assembly
 
 getX86Assembly :: [X86Instruction] -> X86Assembly
 getX86Assembly = addCodeSection getEmptyX86Asm
+
+mergeMultipleAsm :: [X86Assembly] -> X86Assembly 
+mergeMultipleAsm asms = 
+    let codes = map getCodeSection asms in 
+    let datas = map getDataSection asms in 
+    X86Assembly {codeSection = concat codes, dataSection = concat datas}
