@@ -41,7 +41,6 @@ library internal-lib
     build-depends:
         base ^>=4.14.3.0
         ,containers
-
     hs-source-dirs: 
         src
 
@@ -55,6 +54,8 @@ executable compiler
     build-depends:   
         internal-lib,
         base ^>=4.14.3.0
+        ,process ^>=1.6.15.0
+
     hs-source-dirs:   
         app
     default-language: Haskell2010

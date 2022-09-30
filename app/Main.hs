@@ -9,20 +9,9 @@ import Generator.X86Assembly
 import Generator.Generator ( generateX86, getInitialAsm, getEndingAsm )
 import System.IO
 import Data.Foldable
+import System.Process
+import System.Environment
 
--- getAsm :: Maybe X86Assembly
--- getAsm = let parsingResult = runParser ifExpressionParser   "if 2 == 5 then println(\"match\") else println(\"unmatch\")" in 
---     let initialAsm = getInitialAsm in
---     let middle = (case parsingResult of  
---                     ParsingSuccess node rest -> Just 
---                                 (mergeAsm (generateX86 node initialAsm) getEndingAsm)
---                     ParsingError e -> Nothing) in 
---     middle
-
--- main = case getAsm of 
---     Just X86Assembly {codeSection = codeSection, dataSection = dataSection} -> 
---                                                         mapM_ print (codeSection ++ dataSection)
---     Nothing -> print ""
 printAsm :: Maybe X86Assembly -> IO ()
 printAsm (Just X86Assembly {codeSection = codeSection, dataSection = dataSection}) =
                                                             mapM_ print (codeSection  ++ dataSection)
@@ -30,12 +19,20 @@ printAsm _ = print ""
 
 writeAsmToFile :: Maybe X86Assembly -> IO ()
 writeAsmToFile (Just X86Assembly {codeSection = codeSection, dataSection = dataSection}) =
-    let asmStr = foldl (\str asm -> str ++ show asm ++ "\n") "" (codeSection ++ dataSection) in 
-        writeFile "new.asm" asmStr 
+    do 
+        let asmStr = foldl (\str asm -> str ++ show asm ++ "\n") "" (codeSection ++ dataSection) 
+        writeFile "new.asm" asmStr
+        callCommand "nasm -fmacho64 new.asm -o new.o" 
+        callCommand "gcc -o new new.o -w"
+        callCommand "./new"
+        callCommand "rm new.asm new.o new"
+
 writeAsmToFile _ = print "There was an error compiling."
 
 main = do
-    handle <- openFile "./app/hello_world.sl" ReadMode
+    args <- getArgs 
+    let fileName = head args 
+    handle <- openFile fileName ReadMode
     contents <- hGetContents handle
     let ast = runParser programParser contents
     let asm = case ast of
