@@ -6,14 +6,10 @@ _main:
 push rbp
 mov rbp, rsp
 sub rsp, 16
-mov r8, 2
-push r8
-mov r9, 2
-pop r8
-add r8, r9
-mov r8, r8
-mov [rbp-(8*1)], r8
-mov r8, [rbp-(8*1)]
+mov r10, 2
+mov r11, 2
+sub r10, r11
+mov r8, r10
 mov rdi, __slash_integer_format
 mov rsi, r8
 call _printf

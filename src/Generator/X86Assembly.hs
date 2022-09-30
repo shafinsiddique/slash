@@ -17,6 +17,7 @@ instance Show Register where
     show RSP = "rsp"
     show R10 = "r10"
     show R11 = "r11"
+    
 data X86Instruction = MOV Register String | CALL String |
         Extern String | Global String | Default String | StringPair String String
         | ADD Register Register | SUB Register Register | IMUL Register Register

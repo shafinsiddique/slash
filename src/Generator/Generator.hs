@@ -79,7 +79,7 @@ getPrintVariableAsm register name state =
                 StringReturn -> getPrintStrAsm register
                 ErrorReturn -> getEmptyX86Asm 
         Nothing -> getEmptyX86Asm 
-        
+
 getPrintAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm expr register state  =
     let (exprAsm, _) = generateAsmForExpression expr state register in 
@@ -90,6 +90,7 @@ getPrintAsm expr register state  =
                     Multiplication _ _ -> getPrintNumAsm register 
                     StringExpr _ -> getPrintStrAsm register 
                     VariableExpr name -> getPrintVariableAsm register name state 
+                    BooleanOpExpr _ -> getPrintNumAsm register
                     _ -> getEmptyX86Asm in 
     (mergeAsm exprAsm printCode, state)
 
