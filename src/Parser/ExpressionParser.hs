@@ -7,7 +7,15 @@ module Parser.ExpressionParser
 ) where
 
 import Parser.Combinator
-import Parser.ProgramNode (Expression(..))
+    ( anyOf,
+      charParser,
+      optionalParser,
+      spaceAndNewlineParser,
+      wordParser,
+      wordParserWithSpace,
+      Parser )
+
+import Parser.ProgramNode 
 import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser)
@@ -30,7 +38,13 @@ letExpressionParser = handleLetExpression
 handlePrintStatementParser :: String -> Char -> Expression -> Char -> Expression
 handlePrintStatementParser _ _ expr _ = PrintExpr {toPrint = expr}
 
---- TODO : handle spacing.
+booleanOpParserRight :: BooleanSign -> Parser (BooleanSign, Expression)
+booleanOpParserRight sign = (\_ y -> (sign, y)) <$>
+                        wordParserWithSpace (show sign)
+                        <*> expressionParser
+
+booleanOperationParser :: Parser (BooleanSign, Expression)
+booleanOperationParser = anyOf [booleanOpParserRight Equality]
 
 printExpressionParser :: Parser Expression
 printExpressionParser = handlePrintStatementParser <$> wordParser "println"
@@ -38,8 +52,17 @@ printExpressionParser = handlePrintStatementParser <$> wordParser "println"
                     <*> expressionParser
                     <*> charParser ')'
 
+getBooleanExpression :: Expression -> BooleanSign -> Expression -> Expression
+getBooleanExpression left Equality right = BooleanOpExpr (EqualityExpr left right)
+
+handleExpression :: Char -> Expression -> Maybe (BooleanSign, Expression) -> Char -> Expression
+handleExpression _ expr maybeBool _ = case maybeBool of 
+                                    Just (sign, right) -> getBooleanExpression expr sign right
+                                    Nothing -> expr
+
 expressionParser :: Parser Expression
-expressionParser = (\ _ y _ -> y) <$> spaceAndNewlineParser
-                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser, 
+expressionParser = handleExpression <$> spaceAndNewlineParser
+                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser,
                 variableExpressionParser]
+                <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser

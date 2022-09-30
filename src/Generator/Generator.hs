@@ -44,34 +44,54 @@ printStr str state = let reg = R8 in
     let code = [MOVR RDI reg, CALL "_printf"]
     in (addCodeSection stringAsm code, newState)
 
-printVarBasedOnTypeAsm :: X86Assembly -> ReturnType -> Register ->  X86Assembly 
-printVarBasedOnTypeAsm asm varType reg = 
-    let callPrint = CALL "_printf" in 
+printVarBasedOnTypeAsm :: X86Assembly -> ReturnType -> Register ->  X86Assembly
+printVarBasedOnTypeAsm asm varType reg =
+    let callPrint = CALL "_printf" in
     let codeSection = case varType of
             IntReturn -> [MOV RDI integerFormattedStringConst, MOVR RSI reg, callPrint]
             StringReturn -> [MOVR RDI reg, callPrint]
             _ -> []
     in addCodeSection asm codeSection
-    
+
 printVariable :: String -> ProgramState -> (X86Assembly, ProgramState)
-printVariable name state = 
+printVariable name state =
     case findVariable state name of
-        Just (VariableInfo offset varType) -> 
-            let reg = R9 in 
-            let (varAsm, _) = getVariableExprAsm name reg state in 
+        Just (VariableInfo offset varType) ->
+            let reg = R9 in
+            let (varAsm, _) = getVariableExprAsm name reg state in
             (printVarBasedOnTypeAsm varAsm varType reg, state)
         Nothing -> (getEmptyX86Asm, state)
 
+getPrintNumAsm :: Register -> X86Assembly 
+getPrintNumAsm register = addCodeSection getEmptyX86Asm 
+                    [MOV RDI integerFormattedStringConst, MOVR RSI register, CALL "_printf"]
+
+getPrintStrAsm :: Register -> X86Assembly 
+getPrintStrAsm register = addCodeSection getEmptyX86Asm 
+                                            [MOVR RDI register, CALL "_printf"]
+
+getPrintVariableAsm :: Register -> String -> ProgramState -> X86Assembly 
+getPrintVariableAsm register name state = 
+    case findVariable state name of
+        Just (VariableInfo offset varType) -> 
+            case varType of
+                IntReturn -> getPrintNumAsm register
+                StringReturn -> getPrintStrAsm register
+                ErrorReturn -> getEmptyX86Asm 
+        Nothing -> getEmptyX86Asm 
+        
 getPrintAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm expr register state  =
-    case expr of
-        Addition _ _ -> (printMath expr, state)
-        Subtraction _ _ -> (printMath expr, state)
-        Multiplication _ _ -> (printMath expr, state)
-        Division _ _ -> (printMath expr, state)
-        StringExpr str -> printStr str state
-        VariableExpr name -> printVariable name state
-        _ -> (getEmptyX86Asm, state)
+    let (exprAsm, _) = generateAsmForExpression expr state register in 
+    let printCode = case expr of 
+                    IntExpr _ -> getPrintNumAsm register 
+                    Addition _ _ -> getPrintNumAsm register 
+                    Subtraction _ _ -> getPrintNumAsm register
+                    Multiplication _ _ -> getPrintNumAsm register 
+                    StringExpr _ -> getPrintStrAsm register 
+                    VariableExpr name -> getPrintVariableAsm register name state 
+                    _ -> getEmptyX86Asm in 
+    (mergeAsm exprAsm printCode, state)
 
 getMathLeftRightAsm :: Register -> Register  -> Expression -> Expression -> X86Assembly
 getMathLeftRightAsm leftReg rightReg left right  =
@@ -105,28 +125,6 @@ getMathExprAsm register expr  =
                         _ -> getEmptyX86Asm) in
                 operateOn expr leftReg rightReg register asm
 
--- getLetExprAsm :: String -> Expression -> Expression -> X86Assembly -> SymbolTable -> Register ->    
---                                                                             (X86Assembly, SymbolTable)
--- getLetExprAsm varName value expr oldAsm symbolTable reg = 
---     let valueAsm = generateAsmForExpression value oldAsm symbolTable R8 in 
---     The value is evaluated and stored in 
-
--- getLetExprAsm :: String -> Expression -> Expression -> ProgramState -> Register -> ProgramState 
--- getLetExprAsm name value expr state reg = 
---     let oldAsm = getAsm state in 
---     let scratchRegister = R8 in 
---     let symbolTable = getSymbolTable state in
---     let id = getNewId symbolTable in 
---     let evaluateValue = generateAsmForExpression value state scratchRegister in 
---     let symbolTable = addSymbol symbolTable name id in 
---     let addValueToStack = addCodeSection (getAsm evaluateValue) [MOVToMem RBP id scratchRegister] in 
-
---     -- let valueAsm = generateAsmForExpression value state scratchRegister in 
---     -- let id = getNewId symbolTable in 
---     -- let symbolTable = addSymbol symbolTable name id in -- Add var name to symbol table.
---     -- let addVarToStack = addCodeSection (getAsm valueAsm) [MOVToMem RBP id scratchRegister] in 
---     -- let newState = generateAsmForExpression expr (Generator.ProgramState.newState (getAsm valueAsm)         
---     --                                                 symbolTable) scratchRegister in
 
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
@@ -146,6 +144,17 @@ getLetExprAsm name value expr reg state =
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
+getBooleanExprAsm :: BooleanOp -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getBooleanExprAsm expr reg state =
+    let (left, right) = case expr of
+                        EqualityExpr left right -> (left, right) in
+    let leftReg = R10 in
+    let rightReg = R11 in
+    let (leftAsm, _) = generateAsmForExpression left state leftReg in
+    let (rightAsm, _) = generateAsmForExpression right state rightReg in
+    let mergedAsm = mergeAsm leftAsm rightAsm in
+    (addCodeSection mergedAsm [SUB leftReg rightReg, MOVR reg leftReg], state)
+
 generateAsmForExpression :: Expression -> ProgramState -> Register -> (X86Assembly, ProgramState)
 generateAsmForExpression expression state register =
     let mathGenerator = getMathExprAsm register in
@@ -159,6 +168,7 @@ generateAsmForExpression expression state register =
                 StringExpr value ->  getStringAsm value register state
                 LetExpr name value expr -> getLetExprAsm name value expr register state
                 VariableExpr name -> getVariableExprAsm name register state
+                BooleanOpExpr booleanExpr -> getBooleanExprAsm booleanExpr register state
                 _ -> (getEmptyX86Asm, state) ) in
     (newAsm, newState)
 
