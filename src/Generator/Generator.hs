@@ -10,6 +10,7 @@ integerFormattedStringConst = "__slash_integer_format"
 
 getInitialAsm :: X86Assembly
 getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", Extern "_printf",
+                                                                    Extern "_strcmp",
                                                                     StartMain, PUSH RBP,
                                                                     MOVR RBP RSP] in
     X86Assembly {dataSection =
@@ -135,7 +136,6 @@ getVariableExprAsm name reg state =
 
 getLetExprAsm :: String -> Expression -> Expression -> Register -> ProgramState ->
                                                                     (X86Assembly, ProgramState)
-
 getLetExprAsm name value expr reg state =
     let scratchRegister = R8 in
     let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
@@ -145,16 +145,33 @@ getLetExprAsm name value expr reg state =
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
+getMathEqualityCode :: Register -> Register -> Register -> X86Assembly 
+getMathEqualityCode leftReg rightReg dest = getX86Assembly [SUB leftReg rightReg, MOVR dest leftReg]
+
+getStrEqualityCode :: Register -> Register -> Register -> X86Assembly 
+getStrEqualityCode leftReg rightReg dest = getX86Assembly [MOVR RDI leftReg, MOVR RSI rightReg,
+                                            CALL "_strcmp", MOVR dest RAX]
+
+getEqualityCode :: Expression -> Register -> Register -> Register ->  X86Assembly 
+getEqualityCode expr leftReg rightReg dest = case expr of 
+    IntExpr _ -> getMathEqualityCode leftReg rightReg dest
+    Addition _ _ -> getMathEqualityCode leftReg rightReg dest
+    Subtraction _ _ -> getMathEqualityCode leftReg rightReg dest
+    Multiplication _ _ -> getMathEqualityCode leftReg rightReg dest
+    StringExpr _ -> getStrEqualityCode leftReg rightReg dest
+    _ -> getEmptyX86Asm 
+
 getBooleanExprAsm :: BooleanOp -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getBooleanExprAsm expr reg state =
     let (left, right) = case expr of
                         EqualityExpr left right -> (left, right) in
     let leftReg = R10 in
     let rightReg = R11 in
-    let (leftAsm, _) = generateAsmForExpression left state leftReg in
-    let (rightAsm, _) = generateAsmForExpression right state rightReg in
+    let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
+    let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
     let mergedAsm = mergeAsm leftAsm rightAsm in
-    (addCodeSection mergedAsm [SUB leftReg rightReg, MOVR reg leftReg], state)
+    let comparisonCode = getEqualityCode left leftReg rightReg reg in
+    (mergeAsm mergedAsm comparisonCode, rightState)
 
 generateAsmForExpression :: Expression -> ProgramState -> Register -> (X86Assembly, ProgramState)
 generateAsmForExpression expression state register =

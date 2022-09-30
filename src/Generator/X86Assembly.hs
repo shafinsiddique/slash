@@ -5,7 +5,7 @@ import Foreign (touchForeignPtr)
 import Text.Printf
 import Generator.SymbolTable
 
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11
 
 instance Show Register where
     show RDI = "rdi"
@@ -17,7 +17,7 @@ instance Show Register where
     show RSP = "rsp"
     show R10 = "r10"
     show R11 = "r11"
-    
+
 data X86Instruction = MOV Register String | CALL String |
         Extern String | Global String | Default String | StringPair String String
         | ADD Register Register | SUB Register Register | IMUL Register Register
@@ -26,7 +26,7 @@ data X86Instruction = MOV Register String | CALL String |
         | X86Data String String Integer
         | MOVToMem Register Int Register
         | SUBI Register Integer
-        | ADDI Register Integer 
+        | ADDI Register Integer
         | MOVFromMem Register Int Register
 
 
@@ -47,7 +47,7 @@ instance Show X86Instruction where
     show RET = "ret"
     show StartMain = "_main:"
     show (MOVR reg1 reg2) = printf "mov %s, %s" (show reg1) (show reg2)
-    show (X86Data name value end) = printf "%s: db \"%s\", %d" name value end
+    show (X86Data name value end) = printf "%s: db \"%s\", %d, 0" name value end
     show (MOVToMem dest offset reg) = printf "mov [%s-(8*%d)], %s" (show dest) offset (show reg)
     show (SUBI reg value) = printf "sub %s, %d" (show reg) value
     show (ADDI reg value) = printf "add %s, %d" (show reg) value
@@ -72,3 +72,5 @@ addDataSection :: X86Assembly -> [X86Instruction] -> X86Assembly
 addDataSection existing dataSection = mergeAsm existing (X86Assembly
                                                 {dataSection = dataSection, codeSection = []})
 
+getX86Assembly :: [X86Instruction] -> X86Assembly
+getX86Assembly = addCodeSection getEmptyX86Asm
