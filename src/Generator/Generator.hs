@@ -234,13 +234,20 @@ addStackAsm :: X86Assembly -> ProgramState -> X86Assembly
 addStackAsm asm state = let stackSize = getStackSize state in
     mergeAsm (mergeAsm (getStackAllocationAsm stackSize) asm) (getStackCleanupAsm stackSize)
 
-generateX86 :: Expression -> X86Assembly ->  X86Assembly
-generateX86 expression oldAsm =
+generateAsmForExpressions :: [Expression] -> (X86Assembly, ProgramState) -> (X86Assembly, ProgramState)
+generateAsmForExpressions [] (asm, state) = (asm, state)
+generateAsmForExpressions (x:xs) (asm, state) = 
+    let (newAsm, newState) =  generateAsmForExpression x state R8 in 
+        generateAsmForExpressions xs (mergeAsm asm newAsm, newState)
+
+generateX86 :: [Expression] -> X86Assembly
+generateX86 expressions =
+    let oldAsm = getInitialAsm in 
     let symbolTable = getNewSymbolTable in
     let state = getInitialState in
-    let (newAsm, newState) = generateAsmForExpression expression state R8 in
-    let finalAsm = addStackAsm newAsm newState in
-    mergeAsm oldAsm finalAsm
+    let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
+    let finalAsm = addStackAsm newAsm finalState in
+    mergeMultipleAsm [oldAsm, finalAsm, getEndingAsm]
 
 -- Next Steps : 
 -- -- Let In working, parse entire source files rather than snippets, Actually generate code, 

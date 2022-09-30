@@ -3,7 +3,8 @@ module Parser.ExpressionParser
     expressionParser,
     printExpressionParser,
     letExpressionParser,
-    ifExpressionParser
+    ifExpressionParser,
+    programParser
 
 ) where
 
@@ -13,8 +14,9 @@ import Parser.Combinator
       optionalParser,
       spaceAndNewlineParser,
       wordParser,
+      oneOrMore,
       wordParserWithSpace,
-      Parser )
+      Parser, zeroOrMore )
 
 import Parser.ProgramNode
 import Parser.IntegerExpressionParser
@@ -78,3 +80,6 @@ expressionParser = handleExpression <$> spaceAndNewlineParser
                 ifExpressionParser, variableExpressionParser ]
                 <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser
+
+programParser ::  Parser [Expression]
+programParser = oneOrMore expressionParser
