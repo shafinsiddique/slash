@@ -249,33 +249,3 @@ generateX86 expressions =
     let finalAsm = addStackAsm newAsm finalState in
     mergeMultipleAsm [oldAsm, finalAsm, getEndingAsm]
 
--- Next Steps : 
--- -- Let In working, parse entire source files rather than snippets, Actually generate code, 
-
-{-
-
-How would I represent symbol tables,
-
-it is a dictionary.
-
-Every function will have it's own. 
-
-When we create a function, we get the functions asm, the symbol table is for that function. 
-
-So every function we created will get passed a symbol table. 
-
-For now, let's just have it a part of our assembly syntax. 
-
-
-DESIGN : 
-
-
-We don't manipulate code. 
-Code is always merged and is stateless, it's too much hassle having it mutate through function calls.
-The caller will have some Assembly.
-Calls a function - gets some Assembly.
-merge.  
-
-
-
--}

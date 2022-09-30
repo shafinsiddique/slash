@@ -8,6 +8,7 @@ import Generator.X86Assembly
     ( X86Assembly(X86Assembly, codeSection, dataSection), mergeAsm )
 import Generator.Generator ( generateX86, getInitialAsm, getEndingAsm )
 import System.IO
+import Data.Foldable
 
 -- getAsm :: Maybe X86Assembly
 -- getAsm = let parsingResult = runParser ifExpressionParser   "if 2 == 5 then println(\"match\") else println(\"unmatch\")" in 
@@ -23,9 +24,15 @@ import System.IO
 --                                                         mapM_ print (codeSection ++ dataSection)
 --     Nothing -> print ""
 printAsm :: Maybe X86Assembly -> IO ()
-printAsm (Just X86Assembly {codeSection = codeSection, dataSection = dataSection}) = 
+printAsm (Just X86Assembly {codeSection = codeSection, dataSection = dataSection}) =
                                                             mapM_ print (codeSection  ++ dataSection)
 printAsm _ = print ""
+
+writeAsmToFile :: Maybe X86Assembly -> IO ()
+writeAsmToFile (Just X86Assembly {codeSection = codeSection, dataSection = dataSection}) =
+    let asmStr = foldl (\str asm -> str ++ show asm ++ "\n") "" (codeSection ++ dataSection) in 
+        writeFile "new.asm" asmStr 
+writeAsmToFile _ = print "There was an error compiling."
 
 main = do
     handle <- openFile "./app/hello_world.sl" ReadMode
@@ -34,6 +41,6 @@ main = do
     let asm = case ast of
             ParsingSuccess nodes _ -> Just (generateX86 nodes)
             _ -> Nothing
-    printAsm asm 
+    writeAsmToFile asm 
     hClose handle
 
