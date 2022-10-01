@@ -50,7 +50,7 @@ booleanOperationParser :: Parser (BooleanSign, Expression)
 booleanOperationParser = anyOf [booleanOpParserRight Equality]
 
 printExpressionParser :: Parser Expression
-printExpressionParser = handlePrintStatementParser <$> wordParser "println"
+printExpressionParser = handlePrintStatementParser <$> wordParserWithSpace "println"
                     <*> charParser '('
                     <*> expressionParser
                     <*> charParser ')'

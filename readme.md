@@ -2,7 +2,9 @@
 
 Slash is an ML based functional programming language. The compiler currently supports X86-64 architectures.
 
-<img align="center" width="776" height="758" src="demo/slash-demo.gif">
+You can view a demo [here](https://www.youtube.com/watch?v=m7np2kWfVfc).
+
+<img align="center" width="776" height="758" src="demo/slash-demo2.gif">
 
 
 To use Slash :
