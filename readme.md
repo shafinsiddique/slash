@@ -13,4 +13,5 @@ To use Slash :
 
 - Run the following command :
 
-    cabal run compiler <srcfile>
+    
+        cabal run compiler <src>
