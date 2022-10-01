@@ -1,1 +1,0 @@
-let x = \"Hello\" in if x == \"Hello\" println(\"Hello\") else println(\"World\")
