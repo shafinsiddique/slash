@@ -1,2 +1,1 @@
-let x = "shafin" in println(x)
-let y = 10 + 20 in println(y)
+let x = "Hello" if x == "Hello" println("Hello") else println("World")
