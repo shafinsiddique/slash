@@ -32,6 +32,7 @@ data X86Instruction = MOV Register String | CALL String |
         | JZ String 
         | JMP String 
         | Section String
+        | MOVI Register Integer
 
 
 instance Show X86Instruction where
@@ -60,7 +61,8 @@ instance Show X86Instruction where
     show (JZ label) = printf "jz %s" label
     show (JMP label) = printf "jmp %s" label
     show (Section label) = printf "%s:" label
-
+    show (MOVI reg value) = printf "mov %s, %s" (show reg) (show value)
+    
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
 

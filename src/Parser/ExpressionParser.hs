@@ -76,7 +76,7 @@ ifExpressionParser = handleIf <$> wordParserWithSpace "if"
 
 expressionParser :: Parser Expression
 expressionParser = handleExpression <$> spaceAndNewlineParser
-                <*> anyOf [stringParser, mathExpressionParser, letExpressionParser, printExpressionParser,
+                <*> anyOf [stringParser, letExpressionParser, printExpressionParser, mathExpressionParser, 
                 ifExpressionParser, variableExpressionParser ]
                 <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser

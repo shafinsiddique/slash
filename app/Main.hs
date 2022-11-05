@@ -19,8 +19,9 @@ printAsm _ = print ""
 
 writeAsmToFile :: Maybe X86Assembly -> IO ()
 writeAsmToFile (Just X86Assembly {codeSection = codeSection, dataSection = dataSection}) =
-    do 
-        let asmStr = foldl (\str asm -> str ++ show asm ++ "\n") "" (codeSection ++ dataSection) 
+    do
+        let asmStr = foldl (\str asm -> str ++ show asm ++ "\n") "" (codeSection ++ dataSection)
+        putStrLn asmStr
         writeFile "new.asm" asmStr
         callCommand "nasm -fmacho64 new.asm -o new.o" 
         callCommand "gcc -o new new.o -w"
@@ -30,14 +31,16 @@ writeAsmToFile (Just X86Assembly {codeSection = codeSection, dataSection = dataS
 writeAsmToFile _ = print "There was an error compiling."
 
 main = do
-    args <- getArgs 
-    let fileName = head args 
+    args <- getArgs
+    let fileName = head args
     handle <- openFile fileName ReadMode
     contents <- hGetContents handle
     let ast = runParser programParser contents
+    print ast
     let asm = case ast of
             ParsingSuccess nodes _ -> Just (generateX86 nodes)
             _ -> Nothing
+
     writeAsmToFile asm 
     hClose handle
 

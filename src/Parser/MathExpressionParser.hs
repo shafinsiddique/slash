@@ -6,6 +6,7 @@ import Parser.FloatExpressionParser
 import Control.Arrow (ArrowChoice(right))
 import GHC.IO.Buffer (charSize)
 import Control.Concurrent (signalQSemN)
+import Parser.VariableNameParser(variableExpressionParser)
 
 parenthesisExpressionParser :: Parser Expression
 parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' <*> mathExpressionParser <*> charParser ')'
@@ -13,7 +14,7 @@ parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' 
 expressionStartParser :: Parser Expression
 expressionStartParser = (\_ -> (\y -> (\_ -> y))) <$> spaceParser
                         <*> anyOf [parenthesisExpressionParser, floatExpressionParser,                 
-                                        integerExpressionParser]
+                                        integerExpressionParser, variableExpressionParser]
                         <*> spaceParser
 
 
