@@ -5,7 +5,7 @@ import Foreign (touchForeignPtr)
 import Text.Printf
 import Generator.SymbolTable
 
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX 
 
 instance Show Register where
     show RDI = "rdi"
@@ -17,6 +17,9 @@ instance Show Register where
     show RSP = "rsp"
     show R10 = "r10"
     show R11 = "r11"
+    show RCX = "rcx"
+    show RDX = "rdx"
+
 
 data X86Instruction = MOV Register String | CALL String |
         Extern String | Global String | Default String | StringPair String String
@@ -33,6 +36,7 @@ data X86Instruction = MOV Register String | CALL String |
         | JMP String 
         | Section String
         | MOVI Register Integer
+        | DIV Register
 
 
 instance Show X86Instruction where
@@ -62,6 +66,7 @@ instance Show X86Instruction where
     show (JMP label) = printf "jmp %s" label
     show (Section label) = printf "%s:" label
     show (MOVI reg value) = printf "mov %s, %s" (show reg) (show value)
+    show (DIV reg) = printf "div %s" (show reg)
     
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show

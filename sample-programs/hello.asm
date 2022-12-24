@@ -6,7 +6,12 @@ section .text
 _main:
     push rbp
     mov rbp, rsp
+    mov rdx, 0
+    mov rax, 16
+    mov rcx, 3
+    div rcx
     mov rdi, msg
+    mov rsi, rax
     call _printf
     pop rbp 
     mov rax, 0
@@ -14,4 +19,4 @@ _main:
 
 section .data
 
-msg:    db      "Hello World!", 10, 0
+msg:    db      "%d", 10, 0

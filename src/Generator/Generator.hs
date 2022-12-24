@@ -86,6 +86,7 @@ getPrintAsm expr register state  =
     let (exprAsm, finalState) = generateAsmForExpression expr state register in
     let printCode = case expr of
                     IntExpr _ -> getPrintNumAsm register
+                    Division _ _ -> getPrintNumAsm register
                     Addition _ _ -> getPrintNumAsm register
                     Subtraction _ _ -> getPrintNumAsm register
                     Multiplication _ _ -> getPrintNumAsm register
@@ -146,6 +147,15 @@ getMathExprAsm2 expr reg state =
             getX86Assembly [POP leftReg, instr leftReg rightReg,
                         MOVR reg leftReg]], rightState)
 
+getDivExprAsm :: Expression -> Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getDivExprAsm left right reg state = 
+    let leftReg = R8 in 
+    let rightReg = R9 in 
+    let (leftAsm, leftState) = generateAsmForExpression left state leftReg in 
+    let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in 
+    let ending = getX86Assembly [POP leftReg, PUSH RDX, MOVI RDX 0, PUSH RAX, MOVR RAX leftReg, 
+            DIV rightReg, MOVR reg RAX, POP RAX, POP RDX] in 
+    (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH leftReg], rightAsm, ending], rightState)
 
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
@@ -230,7 +240,7 @@ generateAsmForExpression expression state register =
                 Addition _ _ -> getMathExprAsm2 expression register state
                 Subtraction _ _ -> getMathExprAsm2 expression register state
                 Multiplication _ _ -> getMathExprAsm2 expression register state
-                Division _ _ -> getMathExprAsm2 expression register state
+                Division left right -> getDivExprAsm left right register state
                 StringExpr value ->  getStringAsm value register state
                 LetExpr name value expr -> getLetExprAsm name value expr register state
                 VariableExpr name -> getVariableExprAsm name register state
