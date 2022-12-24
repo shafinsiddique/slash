@@ -121,13 +121,4 @@ divisionParser = getMathParser '/'
 
 mathExpressionParser :: Parser Expression
 mathExpressionParser = anyOf [additionParser, subtractionParser, multiplicationParser,
-                                                        divisionParser ,expressionStartParser]
-
--- case to consider:
--- 2 + 8 / 2 / 2 * 2
-
--- What is the sequence that should be.
-
--- 2 + (8/2)/2 * 2
-
--- 2 + ()
+                                                        divisionParser, expressionStartParser]

@@ -24,7 +24,7 @@ writeAsmToFile (Just X86Assembly {codeSection = codeSection, dataSection = dataS
         putStrLn asmStr
         writeFile "new.asm" asmStr
         callCommand "nasm -fmacho64 new.asm -o new.o" 
-        callCommand "gcc -o new new.o -w"
+        callCommand "ld new.o std.o -o new -macosx_version_min 11.0 -L /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem"
         callCommand "./new"
         callCommand "rm new.asm new.o new"
 
