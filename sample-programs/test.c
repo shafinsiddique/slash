@@ -1,6 +1,6 @@
 #include <stdio.h>
 
 int main() {
-    printf("%d", 16/3);
+    printf("%f", 4.9);
     return 0;
 }
