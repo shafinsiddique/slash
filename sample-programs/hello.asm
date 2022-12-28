@@ -15,7 +15,7 @@ _main:
     call _printf
     finit
     mov rdi, msg2
-    movups xmm0, [num1]
+    movups xmm0, [doublesSection + 1 * 8]
     mov rax, 1
     call _printf
     pop rbp 
@@ -26,4 +26,4 @@ section .data
 
 msg:    db      "%d", 10, 0
 msg2: db "%f", 10,0
-num1: dq 3.12
+doublesSection: dq 3.12, 3.21

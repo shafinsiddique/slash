@@ -4,8 +4,9 @@ module Generator.X86Assembly where
 import Foreign (touchForeignPtr)
 import Text.Printf
 import Generator.SymbolTable
+import Data.List
 
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX 
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | XMM0
 
 instance Show Register where
     show RDI = "rdi"
@@ -19,6 +20,7 @@ instance Show Register where
     show R11 = "r11"
     show RCX = "rcx"
     show RDX = "rdx"
+    show XMM0 = "xmm0"
 
 
 data X86Instruction = MOV Register String | CALL String |
@@ -37,6 +39,8 @@ data X86Instruction = MOV Register String | CALL String |
         | Section String
         | MOVI Register Integer
         | DIV Register
+        | MOVUPS Register String Int
+        | DoublesArray String [Double]
 
 
 instance Show X86Instruction where
@@ -67,6 +71,8 @@ instance Show X86Instruction where
     show (Section label) = printf "%s:" label
     show (MOVI reg value) = printf "mov %s, %s" (show reg) (show value)
     show (DIV reg) = printf "div %s" (show reg)
+    show (MOVUPS reg label index) = printf "movups %s, [%s + 8 * %d]" (show reg) label index
+    show (DoublesArray name values) = printf "%s: dq %s" name (intercalate "," (map show values))
     
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show

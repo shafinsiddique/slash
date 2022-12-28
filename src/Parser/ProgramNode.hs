@@ -16,7 +16,7 @@ instance Show BooleanSign where
 
 data BooleanOp = EqualityExpr Expression Expression deriving Show 
 
-data Expression = IntExpr Integer | FloatExpr Float| Addition Expression Expression 
+data Expression = IntExpr Integer | DoubleExpr Double| Addition Expression Expression 
                 | Subtraction Expression Expression
                 | Multiplication Expression Expression | Division Expression Expression 
                 | StringExpr String

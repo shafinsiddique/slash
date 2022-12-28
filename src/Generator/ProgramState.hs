@@ -35,15 +35,24 @@ addSymbol (ProgramState table num ifCounter doubles) name val = ProgramState
                                             (addSymbolToTable table name val) num ifCounter doubles
 
 addDoubleValue :: DoublesSection -> Double -> DoublesSection
-addDoubleValue DoublesSection {values = values , valuesMap = valuesMap} value = 
-    if Data.Map.member value valuesMap 
-        then DoublesSection {values = values, valuesMap = valuesMap} 
-    else 
+addDoubleValue DoublesSection {values = values , valuesMap = valuesMap} value =
+    if Data.Map.member value valuesMap
+        then DoublesSection {values = values, valuesMap = valuesMap}
+    else
         DoublesSection {values = values ++ [value], valuesMap = Data.Map.insert value (length values) valuesMap}
 
 addDouble :: ProgramState -> Double -> ProgramState
-addDouble (ProgramState table num ifCounter doubles) value = 
+addDouble (ProgramState table num ifCounter doubles) value =
                                         ProgramState table num ifCounter (addDoubleValue doubles value)
+
+findDouble :: ProgramState -> Double -> Int
+findDouble (ProgramState _ _ _ DoublesSection {values = _ , valuesMap = valuesMap}) value = 
+                                    case Data.Map.lookup value valuesMap of
+                                        Just index -> index
+                                        Nothing -> -1
+
+getDoubleValues :: ProgramState -> [Double]                                        
+getDoubleValues (ProgramState _ _ _ DoublesSection {values = values, valuesMap = _}) = values
 
 getSymbolTableSize :: ProgramState -> Integer
 getSymbolTableSize (ProgramState table _ _ _) = getSize table

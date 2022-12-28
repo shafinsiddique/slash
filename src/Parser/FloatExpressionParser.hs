@@ -3,10 +3,10 @@ module Parser.FloatExpressionParser where
 import Parser.Combinator
 
 import Parser.IntegerExpressionParser(integerExpressionParser, positiveIntegerParser)
-import Parser.ProgramNode (Expression(IntExpr, FloatExpr))
+import Parser.ProgramNode (Expression(IntExpr, DoubleExpr))
 
 handleFloatParser :: Expression -> Char -> Integer -> Expression 
-handleFloatParser (IntExpr left) _ right = FloatExpr (read ((show left) ++ ('.' : (show right))))
+handleFloatParser (IntExpr left) _ right = DoubleExpr (read ((show left) ++ ('.' : (show right))))
 
 floatExpressionParser :: Parser Expression
 floatExpressionParser = handleFloatParser <$> integerExpressionParser 

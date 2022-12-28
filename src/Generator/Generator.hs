@@ -6,7 +6,9 @@ import Generator.ProgramState
 import Text.Printf
 import GHC.Generics (Constructor(conName))
 import Parser.ReturnType
+
 integerFormattedStringConst = "__slash_integer_format"
+doublesArrayConst = "__slash_doubles_array"
 
 getInitialAsm :: X86Assembly
 getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", Extern "_printf",
@@ -231,6 +233,12 @@ getIfExprAsm cond thenExp elseExp reg state =
         _ -> (getEmptyX86Asm, state)
 
 
+getDoubleExprAsm :: Double -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getDoubleExprAsm value reg state = 
+    let newState = addDouble state value in 
+    let asm = getX86Assembly [MOVUPS reg doublesArrayConst (findDouble newState value)] in 
+    (asm, newState)
+
 generateAsmForExpression :: Expression -> ProgramState -> Register -> (X86Assembly, ProgramState)
 generateAsmForExpression expression state register =
     let (newAsm, newState) =
@@ -246,7 +254,7 @@ generateAsmForExpression expression state register =
                 VariableExpr name -> getVariableExprAsm name register state
                 BooleanOpExpr booleanExpr -> getBooleanExprAsm booleanExpr register state
                 IfExpr cond thenExp elseExp -> getIfExprAsm cond thenExp elseExp register state
-                _ -> (getEmptyX86Asm, state)) in
+                DoubleExpr value -> getDoubleExprAsm value register state) in
     (newAsm, newState)
 
 getStackAllocationAsm :: Integer -> X86Assembly
@@ -263,10 +271,14 @@ addStackAsm :: X86Assembly -> ProgramState -> X86Assembly
 addStackAsm asm state = let stackSize = getStackSize state in
     mergeAsm (mergeAsm (getStackAllocationAsm stackSize) asm) (getStackCleanupAsm stackSize)
 
+getOutputRegister :: Expression -> Register
+getOutputRegister (DoubleExpr  _) = XMM0
+getOutputRegister _ = R8
+
 generateAsmForExpressions :: [Expression] -> (X86Assembly, ProgramState) -> (X86Assembly, ProgramState)
 generateAsmForExpressions [] (asm, state) = (asm, state)
 generateAsmForExpressions (x:xs) (asm, state) =
-    let (newAsm, newState) =  generateAsmForExpression x state R8 in
+    let (newAsm, newState) =  generateAsmForExpression x state (getOutputRegister x) in
         generateAsmForExpressions xs (mergeAsm asm newAsm, newState)
 
 generateX86 :: [Expression] -> X86Assembly
@@ -276,5 +288,7 @@ generateX86 expressions =
     let state = getInitialState in
     let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
     let finalAsm = addStackAsm newAsm finalState in
-    mergeMultipleAsm [oldAsm, finalAsm, getEndingAsm]
+    let asmWithDoubles = addDataSection finalAsm 
+                                [DoublesArray doublesArrayConst (getDoubleValues finalState)] in 
+    mergeMultipleAsm [oldAsm, asmWithDoubles, getEndingAsm]
 
