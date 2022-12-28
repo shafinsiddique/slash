@@ -2,35 +2,52 @@ module Generator.ProgramState where
 import Generator.X86Assembly (X86Assembly, getEmptyX86Asm)
 import Generator.SymbolTable
 import Parser.Combinator (charParser)
+import Data.Map
 
 
-data ProgramState = ProgramState SymbolTable Integer Integer
+data DoublesSection = DoublesSection {values :: [Double], valuesMap :: Map Double Int}
+
+data ProgramState = ProgramState SymbolTable Integer Integer DoublesSection
+
+getInitialDoublesSection :: DoublesSection
+getInitialDoublesSection = DoublesSection {values = [], valuesMap = Data.Map.empty}
 
 createNewConst :: ProgramState -> ProgramState
-createNewConst (ProgramState table num ifCounter) = ProgramState table (num+1) ifCounter
+createNewConst (ProgramState table num ifCounter doubles) = ProgramState table (num+1) ifCounter doubles
 
-createNewIf :: ProgramState -> ProgramState 
-createNewIf (ProgramState table num ifCounter) = ProgramState table num (ifCounter + 1)
+createNewIf :: ProgramState -> ProgramState
+createNewIf (ProgramState table num ifCounter doubles) = ProgramState table num (ifCounter + 1) doubles
 
-getIfCounter :: ProgramState -> Integer 
-getIfCounter (ProgramState _ _ c) = c
+getIfCounter :: ProgramState -> Integer
+getIfCounter (ProgramState _ _ c _) = c
 
 getConstId :: ProgramState -> Integer
-getConstId (ProgramState _ num ifcounter) = num
+getConstId (ProgramState _ num ifcounter _) = num
 
 getInitialState :: ProgramState
-getInitialState = ProgramState getNewSymbolTable 0 0
+getInitialState = ProgramState getNewSymbolTable 0 0 getInitialDoublesSection
 
 getNewSymbolOffset :: ProgramState -> Int
-getNewSymbolOffset (ProgramState table _ _) = getNewId table
+getNewSymbolOffset (ProgramState table _ _ _) = getNewId table
 
 addSymbol :: ProgramState -> String -> VariableInfo -> ProgramState
-addSymbol (ProgramState table num ifCounter) name val = ProgramState 
-                                            (addSymbolToTable table name val) num ifCounter
+addSymbol (ProgramState table num ifCounter doubles) name val = ProgramState
+                                            (addSymbolToTable table name val) num ifCounter doubles
+
+addDoubleValue :: DoublesSection -> Double -> DoublesSection
+addDoubleValue DoublesSection {values = values , valuesMap = valuesMap} value = 
+    if Data.Map.member value valuesMap 
+        then DoublesSection {values = values, valuesMap = valuesMap} 
+    else 
+        DoublesSection {values = values ++ [value], valuesMap = Data.Map.insert value (length values) valuesMap}
+
+addDouble :: ProgramState -> Double -> ProgramState
+addDouble (ProgramState table num ifCounter doubles) value = 
+                                        ProgramState table num ifCounter (addDoubleValue doubles value)
 
 getSymbolTableSize :: ProgramState -> Integer
-getSymbolTableSize (ProgramState table _ _) = getSize table
+getSymbolTableSize (ProgramState table _ _ _) = getSize table
 
-findVariable :: ProgramState -> String -> Maybe VariableInfo 
-findVariable (ProgramState table _ _) = findSymbol table
+findVariable :: ProgramState -> String -> Maybe VariableInfo
+findVariable (ProgramState table _ _ _) = findSymbol table
 
