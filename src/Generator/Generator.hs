@@ -104,12 +104,15 @@ operateOn expr left right destination existing =
                         _ -> []) in
     addCodeSection existing instruction
 
-getIntExprAsm :: Integer -> Register -> X86Assembly
-getIntExprAsm value reg = getX86Assembly [MOVI reg value]
-
 registerIsForDoubles :: Register -> Bool
 registerIsForDoubles (DoubleReg _) = True
 registerIsForDoubles _ = False
+
+getIntExprAsm :: Integer -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getIntExprAsm value reg state = 
+    if registerIsForDoubles reg then getDoubleExprAsm (fromIntegral value) reg state else
+    (getX86Assembly [MOVI reg value], state)
+
 
 getMathExprDoubleAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getMathExprDoubleAsm expr reg state = 
@@ -241,7 +244,7 @@ generateAsmForExpression expression state register =
     let (newAsm, newState) =
             (case expression of
                 PrintExpr {toPrint = value} ->  getPrintAsm value register state
-                IntExpr value -> (getIntExprAsm value register, state)
+                IntExpr value -> getIntExprAsm value register state
                 Addition _ _ -> getMathExprAsm2 expression register state
                 Subtraction _ _ -> getMathExprAsm2 expression register state
                 Multiplication _ _ -> getMathExprAsm2 expression register state
