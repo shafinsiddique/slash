@@ -117,7 +117,8 @@ getMathExprDoubleAsm expr reg state =
             case expr of
                 Addition left right -> (left, right, ADDSD)
                 Subtraction left right -> (left, right, SUBSD)
-                Multiplication left right -> (left, right, MULSD) in 
+                Multiplication left right -> (left, right, MULSD)
+                Division left right -> (left, right, DIVSD) in 
             let leftReg = DoubleReg XMM0 in
             let rightReg = DoubleReg XMM1 in 
             let (leftAsm, leftState) = generateAsmForExpression left state leftReg in 
@@ -145,13 +146,15 @@ getMathExprAsm2 expr reg state =
 
 getDivExprAsm :: Expression -> Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getDivExprAsm left right reg state =
-    let leftReg = R8 in
-    let rightReg = R9 in
-    let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
-    let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-    let ending = getX86Assembly [POP leftReg, PUSH RDX, MOVI RDX 0, PUSH RAX, MOVR RAX leftReg,
-            DIV rightReg, MOVR reg RAX, POP RAX, POP RDX] in
-    (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH leftReg], rightAsm, ending], rightState)
+    if registerIsForDoubles reg then getMathExprDoubleAsm (Division left right) reg state 
+    else
+        let leftReg = R8 in
+        let rightReg = R9 in
+        let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
+        let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
+        let ending = getX86Assembly [POP leftReg, PUSH RDX, MOVI RDX 0, PUSH RAX, MOVR RAX leftReg,
+                DIV rightReg, MOVR reg RAX, POP RAX, POP RDX] in
+        (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH leftReg], rightAsm, ending], rightState)
 
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
