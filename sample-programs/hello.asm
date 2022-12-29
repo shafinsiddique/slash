@@ -16,6 +16,10 @@ _main:
     finit
     mov rdi, msg2
     movups xmm0, [doublesSection + 1 * 8]
+    addsd xmm0, xmm1
+    sub rsp, 8
+    movsd [rsp], xmm0
+    movsd xmm0, [rsp]
     mov rax, 1
     call _printf
     pop rbp 

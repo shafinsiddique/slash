@@ -6,7 +6,14 @@ import Text.Printf
 import Generator.SymbolTable
 import Data.List
 
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | XMM0
+data DoubleRegister = XMM0 | XMM1
+
+instance Show DoubleRegister where
+    show XMM0 = "xmm0"
+    show XMM1 = "xmm1"
+
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | 
+                    DoubleReg DoubleRegister
 
 instance Show Register where
     show RDI = "rdi"
@@ -20,7 +27,7 @@ instance Show Register where
     show R11 = "r11"
     show RCX = "rcx"
     show RDX = "rdx"
-    show XMM0 = "xmm0"
+    show (DoubleReg reg)  = show reg
 
 
 data X86Instruction = MOV Register String | CALL String |
@@ -41,6 +48,11 @@ data X86Instruction = MOV Register String | CALL String |
         | DIV Register
         | MOVUPS Register String Int
         | DoublesArray String [Double]
+        | ADDSD Register Register | SUBSD Register Register | MULSD Register Register 
+        | DIVSD Register Register
+        | MOVFloatToMem Register Int Register
+        | MOVFloatFromMem Register Int Register 
+        | MOVSD Register Register
 
 
 instance Show X86Instruction where
@@ -73,7 +85,15 @@ instance Show X86Instruction where
     show (DIV reg) = printf "div %s" (show reg)
     show (MOVUPS reg label index) = printf "movups %s, [%s + 8 * %d]" (show reg) label index
     show (DoublesArray name values) = printf "%s: dq %s" name (intercalate "," (map show values))
-    
+    show (ADDSD left right) = printf "addsd %s, %s" (show left) (show right)
+    show (SUBSD left right) = printf "subsd %s, %s" (show left) (show right)
+    show (MULSD left right) = printf "mulsd %s, %s" (show left) (show right)
+    show (DIVSD left right) = printf "divsd %s, %s" (show left) (show right)
+    show (MOVFloatToMem dest offset source) = printf "movsd [%s-(8*%d)], %s" (show dest) offset (show source)
+    show (MOVFloatFromMem dest offset source) = printf "movsd %s, [%s-(8*%d)]" 
+                                                        (show dest) (show source) offset 
+    show (MOVSD dest src) = printf "movsd %s, %s" (show dest) (show src)
+
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
 
