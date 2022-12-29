@@ -8,6 +8,7 @@ import GHC.Generics (Constructor(conName))
 import Parser.ReturnType
 
 integerFormattedStringConst = "__slash_integer_format"
+doubleFormattedStringConst = "__slash_double_format"
 doublesArrayConst = "__slash_doubles_array"
 
 getInitialAsm :: X86Assembly
@@ -16,7 +17,9 @@ getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", E
                                                                     StartMain, PUSH RBP,
                                                                     MOVR RBP RSP] in
     X86Assembly {dataSection =
-        [DataSection, X86Data integerFormattedStringConst "%d" 0Xa], codeSection = codeSection}
+        [DataSection, 
+        X86Data integerFormattedStringConst "%d" 0Xa, 
+        X86Data doubleFormattedStringConst "%f" 0xa], codeSection = codeSection}
 
 
 getEndingAsm :: X86Assembly
@@ -61,7 +64,9 @@ printVariable name state =
         Nothing -> (getEmptyX86Asm, state)
 
 getPrintNumAsm :: Register -> X86Assembly
-getPrintNumAsm register = addCodeSection getEmptyX86Asm
+getPrintNumAsm register = if registerIsForDoubles register 
+                then getX86Assembly [MOV RDI doubleFormattedStringConst, MOVI RAX 1, CALL "_printf"] 
+                else getX86Assembly 
                     [MOV RDI integerFormattedStringConst, MOVR RSI register, CALL "_printf"]
 
 getPrintStrAsm :: Register -> X86Assembly
@@ -80,16 +85,18 @@ getPrintVariableAsm register name state =
 
 getPrintAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm expr register state  =
-    let (exprAsm, finalState) = generateAsmForExpression expr state register in
+    let exprReg = getOutputRegister expr in 
+    let (exprAsm, finalState) = generateAsmForExpression expr state exprReg in
     let printCode = case expr of
-                    IntExpr _ -> getPrintNumAsm register
-                    Division _ _ -> getPrintNumAsm register
-                    Addition _ _ -> getPrintNumAsm register
-                    Subtraction _ _ -> getPrintNumAsm register
-                    Multiplication _ _ -> getPrintNumAsm register
-                    StringExpr _ -> getPrintStrAsm register
-                    VariableExpr name -> getPrintVariableAsm register name state
-                    BooleanOpExpr _ -> getPrintNumAsm register
+                    IntExpr _ -> getPrintNumAsm exprReg
+                    Division _ _ -> getPrintNumAsm exprReg
+                    Addition _ _ -> getPrintNumAsm exprReg
+                    Subtraction _ _ -> getPrintNumAsm exprReg
+                    Multiplication _ _ -> getPrintNumAsm exprReg
+                    DoubleExpr _ -> getPrintNumAsm exprReg 
+                    StringExpr _ -> getPrintStrAsm exprReg
+                    VariableExpr name -> getPrintVariableAsm exprReg name state
+                    BooleanOpExpr _ -> getPrintNumAsm exprReg
                     _ -> getEmptyX86Asm in
     (mergeAsm exprAsm printCode, finalState)
 
