@@ -1,1 +1,1 @@
-println(4.31)
+println("%d %d %d %d %d %d", 2,4,5,6,8,10)

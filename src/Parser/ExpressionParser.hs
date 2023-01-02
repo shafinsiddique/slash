@@ -21,7 +21,7 @@ import Parser.Combinator
 import Parser.ProgramNode
 import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
-import Parser.StringExpressionParser (stringParser)
+import Parser.StringExpressionParser (stringParser, stringParser1)
 import Parser.VariableNameParser(variableNameParser, variableExpressionParser)
 
 
@@ -38,8 +38,8 @@ letExpressionParser = handleLetExpression
                 <*> wordParserWithSpace "in"
                 <*> expressionParser
 
-handlePrintStatementParser :: String -> Char -> Expression -> Char -> Expression
-handlePrintStatementParser _ _ expr _ = PrintExpr {toPrint = expr}
+handlePrintStatementParser :: String -> Char -> String -> [Expression] -> Char -> Expression
+handlePrintStatementParser _ _ str exprs _ = PrintExpr {toPrint = str, expressions = exprs }
 
 booleanOpParserRight :: BooleanSign -> Parser (BooleanSign, Expression)
 booleanOpParserRight sign = (\_ y -> (sign, y)) <$>
@@ -52,7 +52,9 @@ booleanOperationParser = anyOf [booleanOpParserRight Equality]
 printExpressionParser :: Parser Expression
 printExpressionParser = handlePrintStatementParser <$> wordParserWithSpace "println"
                     <*> charParser '('
-                    <*> expressionParser
+                    <*> stringParser1
+                    <*> zeroOrMore 
+                        ((\_ _ x -> x) <$> spaceAndNewlineParser <*> charParser ',' <*> expressionParser)
                     <*> charParser ')'
 
 getBooleanExpression :: Expression -> BooleanSign -> Expression -> Expression

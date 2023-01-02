@@ -6,6 +6,7 @@ extern _strcmp
 _main:
 push rbp
 mov rbp, rsp
+sub rsp, 16
 sub rsp, 32
 movsd xmm0, [__slash_doubles_array + 8 * 1]
 movsd [rsp], xmm0
@@ -25,6 +26,7 @@ mov rdi, __slash_doubles_format
 mov rax, 9
 call _printf
 add rsp, 32
+add rsp, 16
 pop rbp
 mov rax, 0
 ret

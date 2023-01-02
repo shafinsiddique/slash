@@ -6,12 +6,18 @@ import Text.Printf
 import Generator.SymbolTable
 import Data.List
 
-data DoubleRegister = XMM0 | XMM1
+data DoubleRegister = XMM0 | XMM1 | XMM2 | XMM3 | XMM4 | XMM5 | XMM6 | XMM7
 
 instance Show DoubleRegister where
     show XMM0 = "xmm0"
     show XMM1 = "xmm1"
-
+    show XMM2 = "xmm2"
+    show XMM3 = "xmm3"
+    show XMM4 = "xmm4"
+    show XMM5 = "xmm5"
+    show XMM6 = "xmm6"
+    show XMM7 = "xmm7"
+ 
 data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | 
                     DoubleReg DoubleRegister
 
@@ -53,6 +59,9 @@ data X86Instruction = MOV Register String | CALL String |
         | MOVFloatToMem Register Int Register
         | MOVFloatFromMem Register Int Register 
         | MOVSD Register Register
+        | MOVPToMem Register Int Register
+        | PUSHDouble Register
+        | POPDouble Register
 
 
 instance Show X86Instruction where
@@ -74,6 +83,7 @@ instance Show X86Instruction where
     show (MOVR reg1 reg2) = printf "mov %s, %s" (show reg1) (show reg2)
     show (X86Data name value end) = printf "%s: db \"%s\", %d, 0" name value end
     show (MOVToMem dest offset reg) = printf "mov [%s-(8*%d)], %s" (show dest) offset (show reg)
+    show (MOVPToMem dest offset reg) = printf "mov [%s+(8*%d)], %s" (show dest) offset (show reg)
     show (SUBI reg value) = printf "sub %s, %d" (show reg) value
     show (ADDI reg value) = printf "add %s, %d" (show reg) value
     show (MOVFromMem dest offset source) = printf "mov %s, [%s-(8*%d)]" (show dest) (show source) offset
@@ -89,10 +99,12 @@ instance Show X86Instruction where
     show (SUBSD left right) = printf "subsd %s, %s" (show left) (show right)
     show (MULSD left right) = printf "mulsd %s, %s" (show left) (show right)
     show (DIVSD left right) = printf "divsd %s, %s" (show left) (show right)
-    show (MOVFloatToMem dest offset source) = printf "movsd [%s-(8*%d)], %s" (show dest) offset (show source)
-    show (MOVFloatFromMem dest offset source) = printf "movsd %s, [%s-(8*%d)]" 
+    show (MOVFloatToMem dest offset source) = printf "movsd [%s+(8*%d)], %s" (show dest) offset (show source)
+    show (MOVFloatFromMem dest offset source) = printf "movsd %s, [%s+(8*%d)]" 
                                                         (show dest) (show source) offset 
     show (MOVSD dest src) = printf "movsd %s, %s" (show dest) (show src)
+    show (PUSHDouble reg) = printf "sub rsp, 8\nmovsd [rsp], %s" (show reg)
+    show (POPDouble reg) = printf "movsd %s, [rsp]\nadd rsp, 8"
 
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show

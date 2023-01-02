@@ -21,7 +21,7 @@ data Expression = IntExpr Integer | DoubleExpr Double| Addition Expression Expre
                 | Multiplication Expression Expression | Division Expression Expression 
                 | StringExpr String
                 | LetExpr String Expression Expression
-                | PrintExpr { toPrint :: Expression } 
+                | PrintExpr { toPrint :: String, expressions :: [Expression] } 
                 | VariableExpr String
                 | BooleanOpExpr BooleanOp
                 | IfExpr Expression Expression Expression
