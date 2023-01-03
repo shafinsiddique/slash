@@ -46,6 +46,7 @@ data X86Instruction = MOV Register String | CALL String |
         | SUBI Register Integer
         | ADDI Register Integer
         | MOVFromMem Register Int Register
+        | MOVPFromMem Register Int Register
         | CMPRI Register Integer 
         | JZ String 
         | JMP String 
@@ -87,6 +88,7 @@ instance Show X86Instruction where
     show (SUBI reg value) = printf "sub %s, %d" (show reg) value
     show (ADDI reg value) = printf "add %s, %d" (show reg) value
     show (MOVFromMem dest offset source) = printf "mov %s, [%s-(8*%d)]" (show dest) (show source) offset
+    show (MOVPFromMem dest offset source) = printf "mov %s, [%s+(8*%d)]" (show dest) (show source) offset
     show (CMPRI reg value) = printf "cmp %s, %d" (show reg) value
     show (JZ label) = printf "jz %s" label
     show (JMP label) = printf "jmp %s" label
@@ -104,7 +106,7 @@ instance Show X86Instruction where
                                                         (show dest) (show source) offset 
     show (MOVSD dest src) = printf "movsd %s, %s" (show dest) (show src)
     show (PUSHDouble reg) = printf "sub rsp, 8\nmovsd [rsp], %s" (show reg)
-    show (POPDouble reg) = printf "movsd %s, [rsp]\nadd rsp, 8"
+    show (POPDouble reg) = printf "movsd %s, [rsp]\nadd rsp, 8" (show reg)
 
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show

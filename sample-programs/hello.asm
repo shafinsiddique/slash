@@ -7,30 +7,26 @@ _main:
 push rbp
 mov rbp, rsp
 sub rsp, 16
-sub rsp, 32
-movsd xmm0, [__slash_doubles_array + 8 * 1]
-movsd [rsp], xmm0
-movsd xmm0, [__slash_doubles_array + 8 * 2]
-movsd [rsp+8], xmm0
-movsd xmm0, [__slash_doubles_array + 8 * 3]
-movsd [rsp+8*2], xmm0
-movsd xmm0, [__slash_doubles_array]
-movsd xmm1, [__slash_doubles_array]
-movsd xmm2, [__slash_doubles_array]
-movsd xmm3, [__slash_doubles_array]
-movsd xmm4, [__slash_doubles_array]
-movsd xmm5, [__slash_doubles_array]
-movsd xmm6, [__slash_doubles_array]
-movsd xmm7, [__slash_doubles_array]
-mov rdi, __slash_doubles_format
-mov rax, 9
+sub rsp, 16
+mov rdi, const_1
+mov rsi, 2
+mov rdx, 4
+mov rcx, 5
+mov r8, 6
+mov r9, 8
+push r8
+mov r8, 10
+mov [rsp+(8*0)], r8
+pop r8
+add rsp, 16
+mov rax, 0
 call _printf
-add rsp, 32
 add rsp, 16
 pop rbp
 mov rax, 0
 ret
 section .data
 __slash_integer_format: db "%d", 10, 0
-__slash_doubles_array: dq 2.0,3.4, 2.9, 2.5
-__slash_doubles_format: db "%f %f %f %f %f %f %f %f %f %f %f", 10, 0
+__slash_double_format: db "%f", 10, 0
+const_1: db "%d %d %d %d %d %d", 10, 0
+__slash_doubles_array: dq 

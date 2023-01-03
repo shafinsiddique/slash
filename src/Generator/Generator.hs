@@ -119,25 +119,26 @@ evaluateExprStoreToStack expression regularReg doubleReg offset state =
                 (mergeMultipleAsm [newAsm, getX86Assembly [MOVPToMem RSP offset regularReg]], newState)
 
 
-getRemainingExprsToStackAsm :: [Expression] -> ProgramState -> (X86Assembly, ProgramState)
-getRemainingExprsToStackAsm expressions state =
-    let regReg = R8 in
-    let doubleReg = DoubleReg XMM0 in
+getRemainingExprsToStackAsm :: [Expression] -> Register -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getRemainingExprsToStackAsm expressions regularReg doubleReg state =
     let (newAsm, _, newState) = foldl (\(asm, offset, state) expr ->
-            let (newAsm, newState) = evaluateExprStoreToStack expr regReg doubleReg offset state in
+            let (newAsm, newState) = evaluateExprStoreToStack expr regularReg doubleReg offset state in
                 (mergeAsm asm newAsm, offset + 1, newState)) (getEmptyX86Asm, 0, state) expressions in
-    (mergeMultipleAsm 
-        [getX86Assembly [PUSH regReg, PUSHDouble doubleReg], 
-        newAsm, getX86Assembly [POPDouble doubleReg, POP regReg]], newState)
+    (newAsm, newState)
 -- TOOD: Handle Stack Math.
 
 getPrintAsm :: String -> [Expression] -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm str expressions register state =
     let (strAsm, newState) = getStringAsm str RDI state in
         let (exprAsms, remaining, doublesCount, secondState) = getPrintExprsAsms expressions [] [RSI, RDX, RCX, R8, R9] (map DoubleReg [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]) 0 [] newState in
-        let (remainingAsm, finalState) = getRemainingExprsToStackAsm remaining secondState in
+        let regularReg = R8 in 
+        let doubleReg = DoubleReg XMM0 in 
+        let (remainingAsm, finalState) = 
+                        getRemainingExprsToStackAsm remaining regularReg doubleReg secondState in
         let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
-           (mergeMultipleAsm [getX86Assembly [SUBI RSP stackSize], strAsm, mergeMultipleAsm exprAsms, remainingAsm, getX86Assembly [ADDI RSP stackSize, MOVI RAX (toInteger doublesCount), CALL "_printf"]], finalState)
+        let stackTopOffset = fromIntegral stackSize `div` 8 in 
+           (mergeMultipleAsm [strAsm, mergeMultipleAsm exprAsms, 
+            getX86Assembly [SUBI RSP 16, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, SUBI RSP stackSize], remainingAsm, getX86Assembly [MOVPFromMem regularReg stackTopOffset RSP, MOVFloatFromMem doubleReg (stackTopOffset+1) RSP, MOVI RAX (toInteger doublesCount), CALL "_printf", ADDI RSP (stackSize + 16)]], finalState)
 
 operateOn :: Expression -> Register -> Register -> Register -> X86Assembly -> X86Assembly
 operateOn expr left right destination existing =
