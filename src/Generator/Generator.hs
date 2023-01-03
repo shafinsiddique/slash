@@ -6,9 +6,6 @@ import Generator.ProgramState
 import Text.Printf
 import GHC.Generics (Constructor(conName))
 import Parser.ReturnType
-
-integerFormattedStringConst = "__slash_integer_format"
-doubleFormattedStringConst = "__slash_double_format"
 doublesArrayConst = "__slash_doubles_array"
 
 getInitialAsm :: X86Assembly
@@ -17,9 +14,7 @@ getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", E
                                                                     StartMain, PUSH RBP,
                                                                     MOVR RBP RSP] in
     X86Assembly {dataSection =
-        [DataSection,
-        X86Data integerFormattedStringConst "%d" 0Xa,
-        X86Data doubleFormattedStringConst "%f" 0xa], codeSection = codeSection}
+        [DataSection], codeSection = codeSection}
 
 
 getEndingAsm :: X86Assembly
@@ -38,50 +33,6 @@ getStringAsm str destination state =
     let dataSection = [X86Data strName str 0xA] in
     let codeSection = [MOV destination strName] in
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
-
-printStr :: String -> ProgramState -> (X86Assembly, ProgramState)
-printStr str state = let reg = R8 in
-    let (stringAsm, newState) = getStringAsm str reg state in
-    let code = [MOVR RDI reg, CALL "_printf"]
-    in (addCodeSection stringAsm code, newState)
-
-printVarBasedOnTypeAsm :: X86Assembly -> ReturnType -> Register ->  X86Assembly
-printVarBasedOnTypeAsm asm varType reg =
-    let callPrint = CALL "_printf" in
-    let codeSection = case varType of
-            IntReturn -> [MOV RDI integerFormattedStringConst, MOVR RSI reg, callPrint]
-            StringReturn -> [MOVR RDI reg, callPrint]
-            _ -> []
-    in addCodeSection asm codeSection
-
-printVariable :: String -> ProgramState -> (X86Assembly, ProgramState)
-printVariable name state =
-    case findVariable state name of
-        Just (VariableInfo offset varType) ->
-            let reg = R9 in
-            let (varAsm, _) = getVariableExprAsm name reg state in
-            (printVarBasedOnTypeAsm varAsm varType reg, state)
-        Nothing -> (getEmptyX86Asm, state)
-
-getPrintNumAsm :: Register -> X86Assembly
-getPrintNumAsm register = if registerIsForDoubles register
-                then getX86Assembly [MOV RDI doubleFormattedStringConst, MOVI RAX 1, CALL "_printf"]
-                else getX86Assembly
-                    [MOV RDI integerFormattedStringConst, MOVR RSI register, CALL "_printf"]
-
-getPrintStrAsm :: Register -> X86Assembly
-getPrintStrAsm register = addCodeSection getEmptyX86Asm
-                                            [MOVR RDI register, CALL "_printf"]
-
-getPrintVariableAsm :: Register -> String -> ProgramState -> X86Assembly
-getPrintVariableAsm register name state =
-    case findVariable state name of
-        Just (VariableInfo offset varType) ->
-            case varType of
-                IntReturn -> getPrintNumAsm register
-                StringReturn -> getPrintStrAsm register
-                ErrorReturn -> getEmptyX86Asm
-        Nothing -> getEmptyX86Asm
 
 getAsmOrAddToRemaining :: Expression -> [Register] -> [Expression] -> [X86Assembly] -> ProgramState ->
     ([X86Assembly], [Expression], [Register], ProgramState)

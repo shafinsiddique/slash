@@ -1,1 +1,4 @@
-println("%f %f %f %f %f %f %f %f %f %f %d %s", 10.3, 2.3, 3.9, 4.9, 2.5, 3.2, 1.2, 3.4, 8.2, 3.1, 2, "shafin")
+let a = 10 in 
+let b = 12 in 
+let sum = a + b in
+println("%d", sum)
