@@ -2,7 +2,7 @@ module Generator.SymbolTable where
 import Data.Map
 import Parser.ReturnType
 
-data VariableInfo = VariableInfo Int ReturnType
+data VariableInfo = VariableInfo {offset :: Int, isDouble :: Bool}
 
 type SymbolTable = Map String VariableInfo
 

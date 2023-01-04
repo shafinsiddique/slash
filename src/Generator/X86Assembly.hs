@@ -58,6 +58,7 @@ data X86Instruction = MOV Register String | CALL String |
         | ADDSD Register Register | SUBSD Register Register | MULSD Register Register 
         | DIVSD Register Register
         | MOVFloatToMem Register Int Register
+        | MOVMFloatToMem Register Int Register
         | MOVFloatFromMem Register Int Register 
         | MOVSD Register Register
         | MOVPToMem Register Int Register
@@ -102,6 +103,7 @@ instance Show X86Instruction where
     show (MULSD left right) = printf "mulsd %s, %s" (show left) (show right)
     show (DIVSD left right) = printf "divsd %s, %s" (show left) (show right)
     show (MOVFloatToMem dest offset source) = printf "movsd [%s+(8*%d)], %s" (show dest) offset (show source)
+    show (MOVMFloatToMem dest offset source) = printf "movsd [%s-(8*%d)], %s" (show dest) offset (show source)
     show (MOVFloatFromMem dest offset source) = printf "movsd %s, [%s+(8*%d)]" 
                                                         (show dest) (show source) offset 
     show (MOVSD dest src) = printf "movsd %s, %s" (show dest) (show src)

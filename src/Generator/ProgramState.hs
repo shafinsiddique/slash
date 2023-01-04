@@ -1,5 +1,5 @@
 module Generator.ProgramState where
-import Generator.X86Assembly (X86Assembly, getEmptyX86Asm)
+import Generator.X86Assembly (X86Assembly, getEmptyX86Asm, Register (..))
 import Generator.SymbolTable
 import Parser.Combinator (charParser)
 import Data.Map
@@ -33,6 +33,8 @@ getNewSymbolOffset (ProgramState table _ _ _) = getNewId table
 addSymbol :: ProgramState -> String -> VariableInfo -> ProgramState
 addSymbol (ProgramState table num ifCounter doubles) name val = ProgramState
                                             (addSymbolToTable table name val) num ifCounter doubles
+
+
 
 addDoubleValue :: DoublesSection -> Double -> DoublesSection
 addDoubleValue DoublesSection {values = values , valuesMap = valuesMap} value =

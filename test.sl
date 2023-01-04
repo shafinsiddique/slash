@@ -1,4 +1,2 @@
-let a = 10 in 
-let b = 12 in 
-let sum = a + b in
-println("%d", sum)
+let x = 12.3 in 
+println("%f", x)
