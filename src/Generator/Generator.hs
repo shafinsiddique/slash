@@ -169,7 +169,8 @@ getDivExprAsm left right reg state =
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
     case findVariable state name of
-        Just VariableInfo {offset = offset} -> (addCodeSection getEmptyX86Asm [MOVFromMem reg offset RBP], state)
+        Just VariableInfo {offset = offset} -> let instr = if (registerIsForDoubles reg) then MOVMFloatFromMem else MOVFromMem in 
+            (addCodeSection getEmptyX86Asm [instr reg offset RBP], state)
         Nothing -> (getEmptyX86Asm, state)
 
 -- let x = 12 in println("%d", x)
@@ -179,7 +180,7 @@ getLetExprAsm name value expr reg state =
     let scratchRegister = getOutputRegister value state in
     let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
     let symbolOffset = getNewSymbolOffset valState in
-    let stateWithNewSymbol = addSymbol valState name (VariableInfo {offset = symbolOffset, isDouble = registerIsForDoubles reg})  in
+    let stateWithNewSymbol = addSymbol valState name (VariableInfo {offset = symbolOffset, isDouble = expressionHasDouble value valState})  in
     let movInstr = if registerIsForDoubles scratchRegister then MOVMFloatToMem else MOVToMem in
     let addToStackAsm = addCodeSection valAsm [movInstr RBP symbolOffset scratchRegister] in
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in

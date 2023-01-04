@@ -60,6 +60,7 @@ data X86Instruction = MOV Register String | CALL String |
         | MOVFloatToMem Register Int Register
         | MOVMFloatToMem Register Int Register
         | MOVFloatFromMem Register Int Register 
+        | MOVMFloatFromMem Register Int Register 
         | MOVSD Register Register
         | MOVPToMem Register Int Register
         | PUSHDouble Register
@@ -106,6 +107,9 @@ instance Show X86Instruction where
     show (MOVMFloatToMem dest offset source) = printf "movsd [%s-(8*%d)], %s" (show dest) offset (show source)
     show (MOVFloatFromMem dest offset source) = printf "movsd %s, [%s+(8*%d)]" 
                                                         (show dest) (show source) offset 
+
+    show (MOVMFloatFromMem dest offset source) = printf "movsd %s, [%s-(8*%d)]" 
+                                                        (show dest) (show source) offset                                                  
     show (MOVSD dest src) = printf "movsd %s, %s" (show dest) (show src)
     show (PUSHDouble reg) = printf "sub rsp, 8\nmovsd [rsp], %s" (show reg)
     show (POPDouble reg) = printf "movsd %s, [rsp]\nadd rsp, 8" (show reg)
