@@ -1,4 +1,3 @@
-
 module Generator.X86Assembly where
 
 import Foreign (touchForeignPtr)
@@ -18,7 +17,7 @@ instance Show DoubleRegister where
     show XMM6 = "xmm6"
     show XMM7 = "xmm7"
  
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | 
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | EAX | ECX | EDX |
                     DoubleReg DoubleRegister
 
 instance Show Register where
@@ -34,6 +33,9 @@ instance Show Register where
     show RCX = "rcx"
     show RDX = "rdx"
     show (DoubleReg reg)  = show reg
+    show EAX = "eax"
+    show ECX = "ecx"
+    show EDX = "edx"
 
 
 data X86Instruction = MOV Register String | CALL String |
@@ -65,6 +67,8 @@ data X86Instruction = MOV Register String | CALL String |
         | MOVPToMem Register Int Register
         | PUSHDouble Register
         | POPDouble Register
+        | PUSH32 Register
+        | POP32 Register
 
 
 instance Show X86Instruction where
@@ -113,6 +117,8 @@ instance Show X86Instruction where
     show (MOVSD dest src) = printf "movsd %s, %s" (show dest) (show src)
     show (PUSHDouble reg) = printf "sub rsp, 8\nmovsd [rsp], %s" (show reg)
     show (POPDouble reg) = printf "movsd %s, [rsp]\nadd rsp, 8" (show reg)
+    show (PUSH32 reg) = printf "sub rsp, 4\nmov [rsp], %s" (show reg)
+    show (POP32 reg) = printf "mov %s, [rsp]\nadd rsp, 4" (show reg)
 
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
