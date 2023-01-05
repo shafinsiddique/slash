@@ -4,7 +4,6 @@ import Generator.SymbolTable
 import Parser.Combinator (charParser)
 import Data.Map
 
-
 data DoublesSection = DoublesSection {values :: [Double], valuesMap :: Map Double Int}
 
 data ProgramState = ProgramState SymbolTable Integer Integer DoublesSection
@@ -33,8 +32,6 @@ getNewSymbolOffset (ProgramState table _ _ _) = getNewId table
 addSymbol :: ProgramState -> String -> VariableInfo -> ProgramState
 addSymbol (ProgramState table num ifCounter doubles) name val = ProgramState
                                             (addSymbolToTable table name val) num ifCounter doubles
-
-
 
 addDoubleValue :: DoublesSection -> Double -> DoublesSection
 addDoubleValue DoublesSection {values = values , valuesMap = valuesMap} value =

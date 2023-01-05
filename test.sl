@@ -1,1 +1,5 @@
-println("%d %d %d %d %d %d %d %f %d", 2+2, 3+1, 8+8, 2+1+3, 4-9, 21-3, 2+9, 21.2+3.9-2.3, 4/2 + 1)
+let x = 2.1 in 
+let y = 4.9 in 
+let z = 3.22 in 
+let str = "hello world!" in
+println("%s", str)
