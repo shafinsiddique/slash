@@ -82,6 +82,9 @@ getRemainingExprsToStackAsm expressions regularReg doubleReg state =
                 (mergeAsm asm newAsm, offset + 1, newState)) (getEmptyX86Asm, 0, state) expressions in
     (newAsm, newState)
 
+getDivRegistersAsm :: Register -> Register -> X86Assembly
+getDivRegistersAsm left right = getX86Assembly [MOVR RAX left, MOVI RDX 0, DIV right]
+
 getPrintAsm :: String -> [Expression] -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm str expressions register state =
     let (strAsm, newState) = getStringAsm str RDI state in
@@ -92,8 +95,10 @@ getPrintAsm str expressions register state =
                         getRemainingExprsToStackAsm remaining regularReg doubleReg secondState in
         let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
         let stackTopOffset = fromIntegral stackSize `div` 8 in
-           (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops,
-            getX86Assembly [SUBI RSP 16, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, SUBI RSP stackSize], remainingAsm, getX86Assembly [MOVPFromMem regularReg stackTopOffset RSP, MOVFloatFromMem doubleReg (stackTopOffset+1) RSP, MOVI RAX (toInteger doublesCount), CALL "_printf", ADDI RSP (stackSize + 16)]], finalState)
+           (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops, 
+                        getX86Assembly [MOVI R10 16], getDivRegistersAsm RSP R10, 
+                        getX86Assembly [SUB RSP RDX, SUBI RSP 32, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, MOVPToMem RSP 2 RDX, SUBI RSP stackSize],
+        remainingAsm, getX86Assembly [MOVPFromMem regularReg stackTopOffset RSP, MOVFloatFromMem doubleReg (stackTopOffset+1) RSP, MOVI RAX (toInteger doublesCount), CALL "_printf", ADDI RSP (stackSize + 16), POP RDX, ADDI RSP 8, ADD RSP RDX]], finalState)
 
 operateOn :: Expression -> Register -> Register -> Register -> X86Assembly -> X86Assembly
 operateOn expr left right destination existing =
@@ -118,6 +123,7 @@ getIntExprAsm :: Integer -> Register -> ProgramState -> (X86Assembly, ProgramSta
 getIntExprAsm value reg state =
     if registerIsForDoubles reg then getDoubleExprAsm (fromIntegral value) reg state else
     (getX86Assembly [MOVI reg value], state)
+
 
 
 getMathExprDoubleAsm :: Expression -> Register -> ProgramState -> (X86Assembly, ProgramState)
@@ -161,8 +167,8 @@ getDivExprAsm left right reg state =
         let rightReg = R9 in
         let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
         let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-        let ending = getX86Assembly [POP leftReg, PUSH RDX, MOVI RDX 0, PUSH RAX, MOVR RAX leftReg,
-                DIV rightReg, MOVR reg RAX, POP RAX, POP RDX] in
+        let ending = getX86Assembly [POP leftReg, MOVI RDX 0, MOVR RAX leftReg,
+                DIV rightReg, MOVR reg RAX] in
         (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH leftReg], rightAsm, ending], rightState)
 
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
@@ -311,15 +317,17 @@ generateAsmForExpressions [] (asm, state) = (asm, state)
 generateAsmForExpressions (x:xs) (asm, state) =
     let (newAsm, newState) =  generateAsmForExpression x state (getOutputRegister x state) in
         generateAsmForExpressions xs (mergeAsm asm newAsm, newState)
-
+-- {"name":"bob", "age":12}
+-- 
+--
+--
 generateX86 :: [Expression] -> X86Assembly
 generateX86 expressions =
     let oldAsm = getInitialAsm in
     let symbolTable = getNewSymbolTable in
     let state = getInitialState in
     let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
-    let finalAsm = addStackAsm newAsm finalState in
-    let asmWithDoubles = addDataSection finalAsm
+    let asmWithDoubles = addDataSection newAsm
                                 [DoublesArray doublesArrayConst (getDoubleValues finalState)] in
     mergeMultipleAsm [oldAsm, asmWithDoubles, getEndingAsm]
 
