@@ -96,8 +96,8 @@ getPrintAsm str expressions register state =
         let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
         let stackTopOffset = fromIntegral stackSize `div` 8 in
            (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops, 
-                        getX86Assembly [MOVI R10 16], getDivRegistersAsm RSP R10, 
-                        getX86Assembly [SUB RSP RDX, SUBI RSP 32, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, MOVPToMem RSP 2 RDX, SUBI RSP stackSize],
+                        getX86Assembly [MOVR R11 RDX, MOVI R10 16], getDivRegistersAsm RSP R10, 
+                        getX86Assembly [SUB RSP RDX, SUBI RSP 32, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, MOVPToMem RSP 2 RDX, SUBI RSP stackSize, MOVR RDX R11],
         remainingAsm, getX86Assembly [MOVPFromMem regularReg stackTopOffset RSP, MOVFloatFromMem doubleReg (stackTopOffset+1) RSP, MOVI RAX (toInteger doublesCount), CALL "_printf", ADDI RSP (stackSize + 16), POP RDX, ADDI RSP 8, ADD RSP RDX]], finalState)
 
 operateOn :: Expression -> Register -> Register -> Register -> X86Assembly -> X86Assembly
