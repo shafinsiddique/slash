@@ -13,6 +13,7 @@ import Parser.Combinator
       charParser,
       optionalParser,
       spaceAndNewlineParser,
+      wordParserWithSpaceNewline,
       wordParser,
       oneOrMore,
       wordParserWithSpace,
@@ -70,16 +71,20 @@ handleIf _ condition _ thenExp _ = IfExpr condition thenExp
 
 ifExpressionParser :: Parser Expression
 ifExpressionParser = handleIf <$> wordParserWithSpace "if"
-                    <*> expressionParser
+                    <*> expressionParser -- fix this later to just BooleanOp. 
                     <*> wordParserWithSpace "then"
                     <*> expressionParser
                     <*> wordParserWithSpace "else"
                     <*> expressionParser
 
+booleanExpressionParser :: Parser Expression
+booleanExpressionParser = (\_ y _ -> if y == "True" 
+    then BooleanOpExpr (TrueFalseExpr True) else BooleanOpExpr (TrueFalseExpr False)) <$> spaceAndNewlineParser <*> anyOf [wordParser "True", wordParser "False"] <*> spaceAndNewlineParser
+
 expressionParser :: Parser Expression
 expressionParser = handleExpression <$> spaceAndNewlineParser
                 <*> anyOf [stringParser, letExpressionParser, printExpressionParser, mathExpressionParser, 
-                ifExpressionParser ]
+                ifExpressionParser, booleanExpressionParser]
                 <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser
 

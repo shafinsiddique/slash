@@ -14,7 +14,7 @@ data BooleanSign = Equality
 instance Show BooleanSign where
     show Equality = "=="
 
-data BooleanOp = EqualityExpr Expression Expression deriving Show 
+data BooleanOp = EqualityExpr Expression Expression | TrueFalseExpr Bool deriving Show
 
 data Expression = IntExpr Integer | DoubleExpr Double| Addition Expression Expression 
                 | Subtraction Expression Expression

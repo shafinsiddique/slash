@@ -207,17 +207,23 @@ getEqualityCode expr leftReg rightReg dest = case expr of
     StringExpr _ -> getStrEqualityCode leftReg rightReg dest
     _ -> getEmptyX86Asm
 
+getTrueFalseExprAsm :: Bool -> Register -> ProgramState -> (X86Assembly, ProgramState)
+getTrueFalseExprAsm val reg state = let intRepresentation = if val then 1 else 0 in 
+    (getX86Assembly [MOVI reg intRepresentation], state)
+
 getBooleanExprAsm :: BooleanOp -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getBooleanExprAsm expr reg state =
-    let (left, right) = case expr of
-                        EqualityExpr left right -> (left, right) in
-    let leftReg = R10 in
-    let rightReg = R11 in
-    let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
-    let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-    let mergedAsm = mergeAsm leftAsm rightAsm in
-    let comparisonCode = getEqualityCode left leftReg rightReg reg in
-    (mergeAsm mergedAsm comparisonCode, rightState)
+    case expr of 
+        TrueFalseExpr val -> getTrueFalseExprAsm val reg state
+    -- let (left, right) = case expr of
+    --                     EqualityExpr left right -> (left, right) in
+    -- let leftReg = R10 in
+    -- let rightReg = R11 in
+    -- let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
+    -- let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
+    -- let mergedAsm = mergeAsm leftAsm rightAsm in
+    -- let comparisonCode = getEqualityCode left leftReg rightReg reg in
+    -- (mergeAsm mergedAsm comparisonCode, rightState)
 
 getIfExprAsm :: Expression -> Expression -> Expression -> Register -> ProgramState ->
                                                                     (X86Assembly , ProgramState)
@@ -310,17 +316,28 @@ expressionHasDouble :: Expression -> ProgramState -> Bool
 expressionHasDouble = _expressionHasDouble
 
 getOutputRegister :: Expression -> ProgramState -> Register
-getOutputRegister expr state = if expressionHasDouble expr state then DoubleReg XMM0 else R8
+getOutputRegister expr state = case expr of 
+    BooleanOpExpr _ -> EAX
+    expr ->  if expressionHasDouble expr state then DoubleReg XMM0 else R8
+
 
 generateAsmForExpressions :: [Expression] -> (X86Assembly, ProgramState) -> (X86Assembly, ProgramState)
 generateAsmForExpressions [] (asm, state) = (asm, state)
 generateAsmForExpressions (x:xs) (asm, state) =
     let (newAsm, newState) =  generateAsmForExpression x state (getOutputRegister x state) in
         generateAsmForExpressions xs (mergeAsm asm newAsm, newState)
--- {"name":"bob", "age":12}
--- 
---
---
+{-
+
+Next Steps :
+
+    - Add Type Declarations
+    - Add Boolean as a type + Printing Booleans.
+    - Function definitions
+    - Custom Types
+    - Lists
+    - Recursion
+
+-}
 generateX86 :: [Expression] -> X86Assembly
 generateX86 expressions =
     let oldAsm = getInitialAsm in

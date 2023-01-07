@@ -15,6 +15,7 @@ module Parser.Combinator
     zeroOrMoreOnCondition,
     wordParser,
     spaceAndNewlineParser,
+    wordParserWithSpaceNewline,
     wordParserWithSpace,
     ifAndParser,
     Parser.Combinator.sequence,
@@ -144,9 +145,12 @@ wordParser :: String -> Parser String
 wordParser word = Parser.Combinator.sequence (map charParser word)
 
 wordParserWithSpace :: String -> Parser String
-wordParserWithSpace word = (\_ -> (\y -> (\_ -> y)))
+wordParserWithSpace word = (\ _ y _ -> y)
                             <$> spaceParser <*> wordParser word <*> spaceParser
 
+
+wordParserWithSpaceNewline :: String -> Parser String
+wordParserWithSpaceNewline word = (\ _ y _ -> y) <$> spaceAndNewlineParser <*> wordParser word <*> spaceAndNewlineParser
 
 ifAndParser :: Parser String
 ifAndParser = do {
