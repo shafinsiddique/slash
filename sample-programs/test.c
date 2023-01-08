@@ -1,6 +1,6 @@
 #include <stdio.h>
-
+#include <stdbool.h>
 int main() {
-    printf("%f", 4.9);
-    return 0;
+    bool x = true;
+    printf("%d", x);
 }

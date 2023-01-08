@@ -1,11 +1,6 @@
 	.section	__TEXT,__text,regular,pure_instructions
 	.build_version macos, 13, 0	sdk_version 13, 0
-	.section	__TEXT,__literal8,8byte_literals
-	.p2align	3                               ## -- Begin function main
-LCPI0_0:
-	.quad	0x401399999999999a              ## double 4.9000000000000004
-	.section	__TEXT,__text,regular,pure_instructions
-	.globl	_main
+	.globl	_main                           ## -- Begin function main
 	.p2align	4, 0x90
 _main:                                  ## @main
 	.cfi_startproc
@@ -16,10 +11,12 @@ _main:                                  ## @main
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 	subq	$16, %rsp
-	movl	$0, -4(%rbp)
+	movb	$1, -1(%rbp)
+	movb	-1(%rbp), %al
+	andb	$1, %al
+	movzbl	%al, %esi
 	leaq	L_.str(%rip), %rdi
-	movsd	LCPI0_0(%rip), %xmm0            ## xmm0 = mem[0],zero
-	movb	$1, %al
+	movb	$0, %al
 	callq	_printf
 	xorl	%eax, %eax
 	addq	$16, %rsp
@@ -29,6 +26,6 @@ _main:                                  ## @main
                                         ## -- End function
 	.section	__TEXT,__cstring,cstring_literals
 L_.str:                                 ## @.str
-	.asciz	"%f"
+	.asciz	"%d"
 
 .subsections_via_symbols

@@ -41,10 +41,10 @@ getAsmOrAddToRemaining :: Expression -> [Register] -> [Expression] -> [X86Assemb
 
 getAsmOrAddToRemaining expr [] remaining asms state pops = (asms, expr:remaining, [], state, pops)
 getAsmOrAddToRemaining expr (reg:remainingReg) remaining asms state pops =
-                let pushInstr = if registerIsForDoubles reg then PUSHDouble else PUSH in 
-                let (newAsm, newState) = generateAsmForExpression expr state reg in 
-                let finalAsm = addCodeSection newAsm [pushInstr reg] in 
-                let popInstr = if registerIsForDoubles reg then POPDouble else POP in 
+                let pushInstr = if registerIsForDoubles reg then PUSHDouble else PUSH in
+                let (newAsm, newState) = generateAsmForExpression expr state reg in
+                let finalAsm = addCodeSection newAsm [pushInstr reg] in
+                let popInstr = if registerIsForDoubles reg then POPDouble else POP in
                 (finalAsm:asms, remaining, remainingReg, newState, popInstr reg:pops)
 
 getPrintExprsAsms :: [Expression] -> [Expression] -> [Register] -> [Register] -> Int ->
@@ -95,8 +95,8 @@ getPrintAsm str expressions register state =
                         getRemainingExprsToStackAsm remaining regularReg doubleReg secondState in
         let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
         let stackTopOffset = fromIntegral stackSize `div` 8 in
-           (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops, 
-                        getX86Assembly [MOVR R11 RDX, MOVI R10 16], getDivRegistersAsm RSP R10, 
+           (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops,
+                        getX86Assembly [MOVR R11 RDX, MOVI R10 16], getDivRegistersAsm RSP R10,
                         getX86Assembly [SUB RSP RDX, SUBI RSP 32, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, MOVPToMem RSP 2 RDX, SUBI RSP stackSize, MOVR RDX R11],
         remainingAsm, getX86Assembly [MOVPFromMem regularReg stackTopOffset RSP, MOVFloatFromMem doubleReg (stackTopOffset+1) RSP, MOVI RAX (toInteger doublesCount), CALL "_printf", ADDI RSP (stackSize + 16), POP RDX, ADDI RSP 8, ADD RSP RDX]], finalState)
 
@@ -115,9 +115,8 @@ registerIsForDoubles :: Register -> Bool
 registerIsForDoubles (DoubleReg _) = True
 registerIsForDoubles _ = False
 
-createAndAddSymbol :: ProgramState -> String -> Bool -> ProgramState
-createAndAddSymbol state name isDouble = let symbolOffset = getNewSymbolOffset state in
-    addSymbol state name (VariableInfo {offset = symbolOffset, isDouble = isDouble})
+createAndAddSymbol :: ProgramState -> String -> ExpressionType -> ProgramState
+createAndAddSymbol = addSymbol
 
 getIntExprAsm :: Integer -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getIntExprAsm value reg state =
@@ -174,20 +173,20 @@ getDivExprAsm left right reg state =
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
     case findVariable state name of
-        Just VariableInfo {offset = offset} -> let instr = if registerIsForDoubles reg then MOVMFloatFromMem else MOVFromMem in
-            (addCodeSection getEmptyX86Asm [instr reg offset RBP], state)
+        Just VariableInfo {offset = offset} -> let instr = if registerIsForDoubles reg then MOVDoubleFromStack else MOVFromStack in
+            (addCodeSection getEmptyX86Asm [instr reg offset], state)
         Nothing -> (getEmptyX86Asm, state)
 
--- let x = 12 in println("%d", x)
 getLetExprAsm :: String -> Expression -> Expression -> Register -> ProgramState ->
                                                                     (X86Assembly, ProgramState)
 getLetExprAsm name value expr reg state =
-    let scratchRegister = getOutputRegister value state in
+    let exprType = getExprType value state in 
+    let scratchRegister = getOutputRegisterFromType exprType  in
     let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
-    let symbolOffset = getNewSymbolOffset valState in
-    let stateWithNewSymbol = addSymbol valState name (VariableInfo {offset = symbolOffset, isDouble = expressionHasDouble value valState})  in
-    let movInstr = if registerIsForDoubles scratchRegister then MOVMFloatToMem else MOVToMem in
-    let addToStackAsm = addCodeSection valAsm [movInstr RBP symbolOffset scratchRegister] in
+    let symbolOffset = getNewSymbolOffset valState exprType in 
+    let stateWithNewSymbol = addSymbol valState name exprType in
+    let movInstr = if registerIsForDoubles scratchRegister then MOVDoubleToStack else MOVToStack in
+    let addToStackAsm = addCodeSection valAsm [movInstr symbolOffset scratchRegister] in
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
@@ -207,13 +206,35 @@ getEqualityCode expr leftReg rightReg dest = case expr of
     StringExpr _ -> getStrEqualityCode leftReg rightReg dest
     _ -> getEmptyX86Asm
 
+{-
+
+println("%b", let x = True in x) // getExpressionType = Bool. Register should be %rdi (8 bytes section) = dil
+
+let x = True in 
+    println("%d", x) -> 
+
+getOutputRegister True
+    r8b
+
+mov r8b, 1
+move to stack (r8b)
+sub rsp, 1
+mov [rbp-1], r8b
+
+println("%d", x) -> get variable type = Bool. 
+    corresponding 1 byte of this register = 
+
+
+let x = (let y = True in y) in x
+
+-}
 getTrueFalseExprAsm :: Bool -> Register -> ProgramState -> (X86Assembly, ProgramState)
-getTrueFalseExprAsm val reg state = let intRepresentation = if val then 1 else 0 in 
+getTrueFalseExprAsm val reg state = let intRepresentation = if val then 1 else 0 in
     (getX86Assembly [MOVI reg intRepresentation], state)
 
 getBooleanExprAsm :: BooleanOp -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getBooleanExprAsm expr reg state =
-    case expr of 
+    case expr of
         TrueFalseExpr val -> getTrueFalseExprAsm val reg state
     -- let (left, right) = case expr of
     --                     EqualityExpr left right -> (left, right) in
@@ -302,23 +323,44 @@ _expressionHasDouble (Division left right) table =
                             _expressionHasDouble left table || _expressionHasDouble right table
 _expressionHasDouble (Multiplication left right) table =
                             _expressionHasDouble left table || _expressionHasDouble right table
-_expressionHasDouble (LetExpr name value result) state =
-    let newState = createAndAddSymbol state name (_expressionHasDouble value state) in
-                                                            _expressionHasDouble result newState
 _expressionHasDouble (VariableExpr name) state =
     case findVariable state name of
-        Just VariableInfo {isDouble = isDouble} -> isDouble
+        Just VariableInfo {exprType = exprType} -> case exprType of
+            DoubleType -> True
+            _ -> False
         Nothing -> False
+
+_expressionHasDouble (LetExpr name value result) state =
+    let newState = createAndAddSymbol state name (getExprType value state) in
+        _expressionHasDouble result newState
 
 _expressionHasDouble _ _ = False
 
 expressionHasDouble :: Expression -> ProgramState -> Bool
 expressionHasDouble = _expressionHasDouble
 
+getExprType :: Expression -> ProgramState -> ExpressionType
+getExprType (LetExpr name value result) state =
+    let newState = createAndAddSymbol state name (getExprType value state) in
+        getExprType result newState
+getExprType (VariableExpr name) state = case findVariable state name of
+    Just VariableInfo {exprType = exprType} -> exprType
+    Nothing -> ErrorType
+
+getExprType (BooleanOpExpr _) state = BoolType
+
+getExprType (StringExpr _) state = StrType
+
+getExprType expr state = if expressionHasDouble expr state then DoubleType else IntType
+
+getOutputRegisterFromType :: ExpressionType  -> Register
+getOutputRegisterFromType exprType = case exprType of
+    DoubleType -> DoubleReg XMM0
+    BoolType -> R8B
+    _ -> R8
+
 getOutputRegister :: Expression -> ProgramState -> Register
-getOutputRegister expr state = case expr of 
-    BooleanOpExpr _ -> EAX
-    expr ->  if expressionHasDouble expr state then DoubleReg XMM0 else R8
+getOutputRegister expr state = getOutputRegisterFromType (getExprType expr state) 
 
 
 generateAsmForExpressions :: [Expression] -> (X86Assembly, ProgramState) -> (X86Assembly, ProgramState)

@@ -18,7 +18,7 @@ instance Show DoubleRegister where
     show XMM7 = "xmm7"
  
 data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | EAX | ECX | EDX |
-                    DoubleReg DoubleRegister
+                    DoubleReg DoubleRegister | R8B
 
 instance Show Register where
     show RDI = "rdi"
@@ -36,6 +36,7 @@ instance Show Register where
     show EAX = "eax"
     show ECX = "ecx"
     show EDX = "edx"
+    show R8B = "r8b"
 
 
 data X86Instruction = MOV Register String | CALL String |
@@ -69,7 +70,10 @@ data X86Instruction = MOV Register String | CALL String |
         | POPDouble Register
         | PUSH32 Register
         | POP32 Register
-
+        | MOVToStack Integer Register
+        | MOVDoubleToStack Integer Register
+        | MOVFromStack Register Integer
+        | MOVDoubleFromStack Register Integer
 
 instance Show X86Instruction where
     show (MOV reg value) = printf "mov %s, %s" (show reg) value
@@ -119,6 +123,10 @@ instance Show X86Instruction where
     show (POPDouble reg) = printf "movsd %s, [rsp]\nadd rsp, 8" (show reg)
     show (PUSH32 reg) = printf "sub rsp, 4\nmov [rsp], %s" (show reg)
     show (POP32 reg) = printf "mov %s, [rsp]\nadd rsp, 4" (show reg)
+    show (MOVToStack offset src) = printf "mov [rbp-%d], %s"  offset (show src)
+    show (MOVDoubleToStack offset src) =  printf "movsd [rbp-%d], %s"  offset (show src)
+    show (MOVFromStack reg offset) = printf "mov %s, [rbp-%d]" (show reg) offset
+    show (MOVDoubleFromStack reg offset) = printf "movsd %s, [rbp-%d]" (show reg) offset
 
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show

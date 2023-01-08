@@ -2,12 +2,25 @@ module Generator.SymbolTable where
 import Data.Map
 import Parser.ReturnType
 
-data VariableInfo = VariableInfo {offset :: Int, isDouble :: Bool}
+data ExpressionType = IntType | StrType | DoubleType | BoolType | ErrorType
+
+data VariableInfo = VariableInfo {offset :: Integer, exprType :: ExpressionType}
 
 type SymbolTable = Map String VariableInfo
 
+getExprSize :: ExpressionType -> Integer
+getExprSize IntType = 8
+getExprSize StrType = 8
+getExprSize DoubleType = 8
+getExprSize BoolType = 1
+getExprSize _ = 8
+
+
 addSymbolToTable :: SymbolTable -> String -> VariableInfo -> SymbolTable
 addSymbolToTable table key value = Data.Map.insert key value table
+
+getVariableSize :: VariableInfo -> Integer
+getVariableSize (VariableInfo _ exprType) = getExprSize exprType
 
 getNewId :: SymbolTable -> Int 
 getNewId table = length (toList table) + 1
