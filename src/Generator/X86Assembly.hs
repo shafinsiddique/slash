@@ -7,6 +7,14 @@ import Data.List
 
 data DoubleRegister = XMM0 | XMM1 | XMM2 | XMM3 | XMM4 | XMM5 | XMM6 | XMM7
 
+data SingleByteReg = R8B | R9B | R10B 
+
+instance Show SingleByteReg where
+    show R8B = "r8b"
+    show R9B = "r9b"
+    show R10B = "r10b"
+
+
 instance Show DoubleRegister where
     show XMM0 = "xmm0"
     show XMM1 = "xmm1"
@@ -18,7 +26,7 @@ instance Show DoubleRegister where
     show XMM7 = "xmm7"
  
 data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | EAX | ECX | EDX |
-                    DoubleReg DoubleRegister | R8B
+                    DoubleReg DoubleRegister | SingleByteReg SingleByteReg
 
 instance Show Register where
     show RDI = "rdi"
@@ -36,7 +44,7 @@ instance Show Register where
     show EAX = "eax"
     show ECX = "ecx"
     show EDX = "edx"
-    show R8B = "r8b"
+    show (SingleByteReg reg) = show reg
 
 
 data X86Instruction = MOV Register String | CALL String |
@@ -74,6 +82,8 @@ data X86Instruction = MOV Register String | CALL String |
         | MOVDoubleToStack Integer Register
         | MOVFromStack Register Integer
         | MOVDoubleFromStack Register Integer
+        | PUSHBytes Integer Register 
+        | POPBytes Register Integer
 
 instance Show X86Instruction where
     show (MOV reg value) = printf "mov %s, %s" (show reg) value
@@ -127,7 +137,8 @@ instance Show X86Instruction where
     show (MOVDoubleToStack offset src) =  printf "movsd [rbp-%d], %s"  offset (show src)
     show (MOVFromStack reg offset) = printf "mov %s, [rbp-%d]" (show reg) offset
     show (MOVDoubleFromStack reg offset) = printf "movsd %s, [rbp-%d]" (show reg) offset
-
+    show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI RSP bytes)) (show fromReg)
+    show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI RSP bytes))
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
 

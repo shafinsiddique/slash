@@ -20,8 +20,9 @@ getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", E
         [DataSection], codeSection = codeSection}
 
 
-getEndingAsm :: X86Assembly
-getEndingAsm = X86Assembly {dataSection = [], codeSection = [POP RBP, MOV RAX "0", RET]}
+getEndingAsm :: ProgramState -> X86Assembly
+getEndingAsm state = X86Assembly {dataSection = [], codeSection =
+        [ADDI RSP (getBytesAllocated state), POP RBP, MOV RAX "0", RET]}
 
 getDataConstName :: Integer -> String
 getDataConstName = printf "const_%d"
@@ -37,15 +38,21 @@ getStringAsm str destination state =
     let codeSection = [MOV destination strName] in
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
 
+getRegisterSize :: Register -> Integer
+getRegisterSize (DoubleReg _) = 8
+getRegisterSize (SingleByteReg _) = 1
+getRegisterSize _ = 8
+
 getAsmOrAddToRemaining :: Expression -> [Register] -> [Expression] -> [X86Assembly] -> ProgramState -> [X86Instruction] -> ([X86Assembly], [Expression], [Register], ProgramState, [X86Instruction])
 
 getAsmOrAddToRemaining expr [] remaining asms state pops = (asms, expr:remaining, [], state, pops)
 getAsmOrAddToRemaining expr (reg:remainingReg) remaining asms state pops =
-                let pushInstr = if registerIsForDoubles reg then PUSHDouble else PUSH in
+                let exprSize = getRegisterSize reg in
+                let pushInstr = PUSHBytes exprSize reg in
                 let (newAsm, newState) = generateAsmForExpression expr state reg in
-                let finalAsm = addCodeSection newAsm [pushInstr reg] in
-                let popInstr = if registerIsForDoubles reg then POPDouble else POP in
-                (finalAsm:asms, remaining, remainingReg, newState, popInstr reg:pops)
+                let finalAsm = addCodeSection newAsm [pushInstr] in
+                let popInstr = POPBytes reg exprSize in
+                (finalAsm:asms, remaining, remainingReg, addBytes newState exprSize, popInstr:pops)
 
 getPrintExprsAsms :: [Expression] -> [Expression] -> [Register] -> [Register] -> Int ->
     [X86Assembly] -> ProgramState -> [X86Instruction] -> ([X86Assembly], [Expression], Int, ProgramState, [X86Instruction])
@@ -99,17 +106,6 @@ getPrintAsm str expressions register state =
                         getX86Assembly [MOVR R11 RDX, MOVI R10 16], getDivRegistersAsm RSP R10,
                         getX86Assembly [SUB RSP RDX, SUBI RSP 32, MOVPToMem RSP 0 regularReg, MOVFloatToMem RSP 1 doubleReg, MOVPToMem RSP 2 RDX, SUBI RSP stackSize, MOVR RDX R11],
         remainingAsm, getX86Assembly [MOVPFromMem regularReg stackTopOffset RSP, MOVFloatFromMem doubleReg (stackTopOffset+1) RSP, MOVI RAX (toInteger doublesCount), CALL "_printf", ADDI RSP (stackSize + 16), POP RDX, ADDI RSP 8, ADD RSP RDX]], finalState)
-
-operateOn :: Expression -> Register -> Register -> Register -> X86Assembly -> X86Assembly
-operateOn expr left right destination existing =
-    let popLeft = POP left in
-    let moveInstr = MOV destination (show left) in
-    let instruction = (case expr of
-                        Addition _ _ -> [popLeft, ADD left right, moveInstr]
-                        Subtraction _ _ -> [popLeft, SUB left right, moveInstr]
-                        Multiplication _ _ -> [popLeft, IMUL left right, moveInstr]
-                        _ -> []) in
-    addCodeSection existing instruction
 
 registerIsForDoubles :: Register -> Bool
 registerIsForDoubles (DoubleReg _) = True
@@ -180,13 +176,14 @@ getVariableExprAsm name reg state =
 getLetExprAsm :: String -> Expression -> Expression -> Register -> ProgramState ->
                                                                     (X86Assembly, ProgramState)
 getLetExprAsm name value expr reg state =
-    let exprType = getExprType value state in 
+    let exprType = getExprType value state in
     let scratchRegister = getOutputRegisterFromType exprType  in
     let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
-    let symbolOffset = getNewSymbolOffset valState exprType in 
+    let symbolOffset = getNewSymbolOffset valState exprType in
     let stateWithNewSymbol = addSymbol valState name exprType in
     let movInstr = if registerIsForDoubles scratchRegister then MOVDoubleToStack else MOVToStack in
-    let addToStackAsm = addCodeSection valAsm [movInstr symbolOffset scratchRegister] in
+    let addToStackAsm = addCodeSection valAsm
+                [SUBI RSP (getExprSize exprType), movInstr symbolOffset scratchRegister] in
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
@@ -360,7 +357,7 @@ getOutputRegisterFromType exprType = case exprType of
     _ -> R8
 
 getOutputRegister :: Expression -> ProgramState -> Register
-getOutputRegister expr state = getOutputRegisterFromType (getExprType expr state) 
+getOutputRegister expr state = getOutputRegisterFromType (getExprType expr state)
 
 
 generateAsmForExpressions :: [Expression] -> (X86Assembly, ProgramState) -> (X86Assembly, ProgramState)
@@ -388,5 +385,5 @@ generateX86 expressions =
     let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
     let asmWithDoubles = addDataSection newAsm
                                 [DoublesArray doublesArrayConst (getDoubleValues finalState)] in
-    mergeMultipleAsm [oldAsm, asmWithDoubles, getEndingAsm]
+    mergeMultipleAsm [oldAsm, asmWithDoubles, getEndingAsm finalState]
 

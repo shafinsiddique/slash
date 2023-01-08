@@ -63,3 +63,9 @@ getSymbolTableSize (ProgramState table _ _ _ _) = getSize table
 findVariable :: ProgramState -> String -> Maybe VariableInfo
 findVariable (ProgramState table _ _ _ _ ) = findSymbol table
 
+getBytesAllocated :: ProgramState -> Integer
+getBytesAllocated ProgramState {bytesAllocated = bytesAllocated} = bytesAllocated
+
+addBytes :: ProgramState -> Integer -> ProgramState
+addBytes (ProgramState table num ifCounter doubles bytes) newBytes = 
+                            ProgramState table num ifCounter doubles (bytes+newBytes)
