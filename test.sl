@@ -1,1 +1,1 @@
-let x = True in x
+println("%d", let x = True in x)

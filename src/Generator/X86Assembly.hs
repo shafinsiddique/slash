@@ -7,13 +7,44 @@ import Data.List
 
 data DoubleRegister = XMM0 | XMM1 | XMM2 | XMM3 | XMM4 | XMM5 | XMM6 | XMM7
 
-data SingleByteReg = R8B | R9B | R10B 
+data SingleByteReg = R8B | R9B | R10B | DIL | SIL | DL | CL 
+
+data TwoByteReg = AX | DI | SI | DX | CX | R8W | R9W | R10W | SP | BX | BP
+
+data FourByteReg = EAX | EDI | ESI | EDX  | ECX | R8D | R9D | R10D | R11D
 
 instance Show SingleByteReg where
     show R8B = "r8b"
     show R9B = "r9b"
     show R10B = "r10b"
+    show DIL = "dil"
+    show SIL = "sil"
+    show DL =  "dl"
+    show CL = "cl"
 
+instance Show TwoByteReg where
+    show AX = "ax"
+    show DI = "di"
+    show SI = "SI"
+    show DX = "dx"
+    show CX = "cx"
+    show R8W = "r8w"
+    show R9W = "r9w"
+    show R10W = "r10w"
+    show SP = "sp"
+    show BX = "bx"
+    show BP = "bp"
+
+instance Show FourByteReg where
+    show EAX = "eax"
+    show EDI = "edi"
+    show ESI = "esi"
+    show EDX = "ecx"
+    show R8D = "r8d"
+    show R9D = "r9d"
+    show R10D = "R10D"
+    show R11D = "r11d"
+    show ECX = "ecx"
 
 instance Show DoubleRegister where
     show XMM0 = "xmm0"
@@ -25,8 +56,9 @@ instance Show DoubleRegister where
     show XMM6 = "xmm6"
     show XMM7 = "xmm7"
  
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | EAX | ECX | EDX |
-                    DoubleReg DoubleRegister | SingleByteReg SingleByteReg
+data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | 
+                    DoubleReg DoubleRegister | SingleByteReg SingleByteReg | TwoByteReg TwoByteReg
+                    | FourByteReg FourByteReg
 
 instance Show Register where
     show RDI = "rdi"
@@ -41,11 +73,10 @@ instance Show Register where
     show RCX = "rcx"
     show RDX = "rdx"
     show (DoubleReg reg)  = show reg
-    show EAX = "eax"
-    show ECX = "ecx"
-    show EDX = "edx"
     show (SingleByteReg reg) = show reg
-
+    show (TwoByteReg reg) = show reg
+    show (FourByteReg reg) = show reg
+    
 
 data X86Instruction = MOV Register String | CALL String |
         Extern String | Global String | Default String | StringPair String String
@@ -84,6 +115,8 @@ data X86Instruction = MOV Register String | CALL String |
         | MOVDoubleFromStack Register Integer
         | PUSHBytes Integer Register 
         | POPBytes Register Integer
+        | XOR Register Register
+        | DEBUG String
 
 instance Show X86Instruction where
     show (MOV reg value) = printf "mov %s, %s" (show reg) value
@@ -139,6 +172,9 @@ instance Show X86Instruction where
     show (MOVDoubleFromStack reg offset) = printf "movsd %s, [rbp-%d]" (show reg) offset
     show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI RSP bytes)) (show fromReg)
     show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI RSP bytes))
+    show (XOR reg1 reg2) = printf "xor %s, %s" (show reg1) (show reg2)
+    show (DEBUG val) = val
+    
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
 
