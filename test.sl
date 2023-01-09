@@ -1,1 +1,1 @@
-println("%d", let x = True in x)
+println("Hello World, Welcome to Slash!")

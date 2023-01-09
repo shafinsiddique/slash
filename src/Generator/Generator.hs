@@ -56,26 +56,29 @@ getAsmOrAddToRemaining expr (reg:remainingReg) remaining asms state pops =
                 let regForDoubles = registerIsForDoubles reg in
                 let exprSize = 8 in
                 let pushInstr = if regForDoubles then PUSHDouble else PUSH in
+                let originalBytes = getBytesAllocated state in 
                 let (newAsm, newState) = generateAsmForExpression expr state reg in
-                let finalAsm = addCodeSection newAsm [pushInstr reg] in
+                let bytesAllocated = getBytesAllocated newState in 
+                let finalState = setBytes newState originalBytes in 
+                let finalAsm = addCodeSection newAsm [ADDI RSP (bytesAllocated-originalBytes), pushInstr reg] in
                 let popInstr = if regForDoubles then POPDouble else POP in
-                (finalAsm:asms, remaining, remainingReg, addBytes newState exprSize, popInstr reg:pops)
+                (finalAsm:asms, remaining, remainingReg, addBytes finalState exprSize, popInstr reg:pops)
 
 getPrintExprsAsms :: [Expression] -> [Expression] -> [Register] -> [Register] -> Int ->
-    [X86Assembly] -> ProgramState -> [X86Instruction]  -> ([X86Assembly], [Expression], Int, ProgramState, [X86Instruction])
+    [X86Assembly] -> ProgramState -> [X86Instruction] -> Integer -> ([X86Assembly], [Expression], Int, ProgramState, [X86Instruction])
 
-getPrintExprsAsms [] remaining _ _ count asms state pops = (reverse asms, reverse remaining, count, state, pops)
+getPrintExprsAsms [] remaining _ _ count asms state pops originalBytes = (reverse asms, reverse remaining, count, setBytes state originalBytes, pops)
 
-getPrintExprsAsms (x:xs) remaining regular doubles count asms state pops  =
+getPrintExprsAsms (x:xs) remaining regular doubles count asms state pops originalBytes  =
     if expressionHasDouble x state then
         let (newAsms, remainingExprs, remainingDoubleReg, newState, newPops) =
                         getAsmOrAddToRemaining x doubles remaining asms state pops in
         let newCount = count + 1 in
-        getPrintExprsAsms xs remainingExprs regular remainingDoubleReg newCount newAsms newState newPops 
+        getPrintExprsAsms xs remainingExprs regular remainingDoubleReg newCount newAsms newState newPops originalBytes
 
     else
         let (newAsms, remainingExprs, remainingReg, newState, newPops) = getAsmOrAddToRemaining x regular remaining asms state pops in
-            getPrintExprsAsms xs remainingExprs remainingReg doubles count newAsms newState newPops 
+            getPrintExprsAsms xs remainingExprs remainingReg doubles count newAsms newState newPops originalBytes
 
 evaluateExprStoreToStack :: Expression -> Register -> Register ->
     Int -> ProgramState -> (X86Assembly, ProgramState)
@@ -110,14 +113,12 @@ getDivRegistersAsm left right = getX86Assembly [MOVR RAX left, MOVI RDX 0, DIV r
 getPrintAsm :: String -> [Expression] -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm str expressions register state =
     let (strAsm, newState) = getStringAsm str RDI state in
-        let originalBytes = getBytesAllocated state in 
-        let (exprAsms, remaining, doublesCount, secondState, pops) = getPrintExprsAsms expressions [] [RSI, RDX, RCX, R8, R9] (Prelude.map DoubleReg [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]) 0 [] newState [] in
-        let bytesAllocated = getBytesAllocated secondState in 
-        let thirdState = setBytes secondState originalBytes in 
+        let originalBytes = getBytesAllocated state in
+        let (exprAsms, remaining, doublesCount, secondState, pops) = getPrintExprsAsms expressions [] [RSI, RDX, RCX, R8, R9] (Prelude.map DoubleReg [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]) 0 [] newState [] originalBytes in
         let regularReg = R8 in
         let doubleReg = DoubleReg XMM0 in
         let (remainingAsm, finalState) =
-                        getRemainingExprsToStackAsm remaining regularReg doubleReg thirdState in
+                        getRemainingExprsToStackAsm remaining regularReg doubleReg secondState in
         let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
         let stackTopOffset = fromIntegral stackSize `div` 8 in
            (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops,
@@ -256,13 +257,13 @@ of this register. This can be calculated easily. THen we ZERO OUT THE ENTIRE REG
 getVariableExprAsm :: String -> Register -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
     case findVariable state name of
-        Just VariableInfo {offset = offset, exprType = exprType} -> 
-                if registerIsForDoubles reg 
+        Just VariableInfo {offset = offset, exprType = exprType} ->
+                if registerIsForDoubles reg
                     then (getX86Assembly [MOVDoubleFromStack reg offset], state)
-                else 
-                    let correctReg = getCorrectReg reg (getExprSize exprType) in 
+                else
+                    let correctReg = getCorrectReg reg (getExprSize exprType) in
                         (getX86Assembly [XOR reg reg, MOVFromStack correctReg offset], state)
-                
+
             -- (getX86Assembly [instr correctReg offset], state)
         Nothing -> (getEmptyX86Asm, state)
 

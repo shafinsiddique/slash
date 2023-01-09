@@ -149,7 +149,9 @@ instance Show X86Instruction where
     show (MOVI reg value) = printf "mov %s, %s" (show reg) (show value)
     show (DIV reg) = printf "div %s" (show reg)
     show (MOVUPS reg label index) = printf "movups %s, [%s + 8 * %d]" (show reg) label index
-    show (DoublesArray name values) = printf "%s: dq %s" name (intercalate "," (map show values))
+    show (DoublesArray name values) = case values of
+        [] -> ""
+        values -> printf "%s: dq %s" name (intercalate "," (map show values))
     show (ADDSD left right) = printf "addsd %s, %s" (show left) (show right)
     show (SUBSD left right) = printf "subsd %s, %s" (show left) (show right)
     show (MULSD left right) = printf "mulsd %s, %s" (show left) (show right)
