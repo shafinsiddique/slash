@@ -67,5 +67,8 @@ getBytesAllocated :: ProgramState -> Integer
 getBytesAllocated ProgramState {bytesAllocated = bytesAllocated} = bytesAllocated
 
 addBytes :: ProgramState -> Integer -> ProgramState
-addBytes (ProgramState table num ifCounter doubles bytes) newBytes = 
+addBytes (ProgramState table num ifCounter doubles bytes) newBytes =
                             ProgramState table num ifCounter doubles (bytes+newBytes)
+
+setBytes :: ProgramState -> Integer -> ProgramState
+setBytes (ProgramState table num ifCounter doubles _) = ProgramState table num ifCounter doubles
