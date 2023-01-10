@@ -84,6 +84,7 @@ data X86Instruction = MOV Register String | CALL String |
         | PUSH Register | POP Register | TextSection | DataSection | RET | StartMain
         | MOVR Register Register
         | X86Data String String Integer
+        | X86StringConst String String
         | MOVToMem Register Int Register
         | SUBI Register Integer
         | ADDI Register Integer
@@ -136,6 +137,7 @@ instance Show X86Instruction where
     show StartMain = "_main:"
     show (MOVR reg1 reg2) = printf "mov %s, %s" (show reg1) (show reg2)
     show (X86Data name value end) = printf "%s: db \"%s\", %d, 0" name value end
+    show (X86StringConst name value) = printf "%s: db `%s`, 10, 0" name value
     show (MOVToMem dest offset reg) = printf "mov [%s-(8*%d)], %s" (show dest) offset (show reg)
     show (MOVPToMem dest offset reg) = printf "mov [%s+(8*%d)], %s" (show dest) offset (show reg)
     show (SUBI reg value) = printf "sub %s, %d" (show reg) value

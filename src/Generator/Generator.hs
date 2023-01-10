@@ -40,7 +40,7 @@ getStringAsm str destination state =
     let newState = createNewConst state in
     let newId = getConstId newState in
     let strName = getDataConstName newId in
-    let dataSection = [X86Data strName str 0xA] in
+    let dataSection = [X86StringConst strName str] in
     let codeSection = [MOV destination strName] in
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
 
