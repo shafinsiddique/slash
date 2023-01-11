@@ -13,6 +13,13 @@ data TwoByteReg = AX | DI | SI | DX | CX | R8W | R9W | R10W | SP | BX | BP
 
 data FourByteReg = EAX | EDI | ESI | EDX  | ECX | R8D | R9D | R10D | R11D
 
+data WordReg = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | RBX | R12 
+                    | R13 | R14 | R15 | RIP |
+                    DoubleReg DoubleRegister 
+
+data Register =  WordReg WordReg | SingleByteReg SingleByteReg | TwoByteReg TwoByteReg
+                    | FourByteReg FourByteReg
+
 instance Show SingleByteReg where
     show R8B = "r8b"
     show R9B = "r9b"
@@ -56,11 +63,8 @@ instance Show DoubleRegister where
     show XMM6 = "xmm6"
     show XMM7 = "xmm7"
  
-data Register = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | 
-                    DoubleReg DoubleRegister | SingleByteReg SingleByteReg | TwoByteReg TwoByteReg
-                    | FourByteReg FourByteReg
 
-instance Show Register where
+instance Show WordReg where
     show RDI = "rdi"
     show RSI = "rsi"
     show RBP = "rbp"
@@ -72,7 +76,17 @@ instance Show Register where
     show R11 = "r11"
     show RCX = "rcx"
     show RDX = "rdx"
+    show RIP = "rip"
+    show RBX = "rbx"
+    show R12 = "r12"
+    show R13 = "r13"
+    show R14 = "r14"
+    show R15 = "r15"
     show (DoubleReg reg)  = show reg
+
+
+instance Show Register where
+    show (WordReg reg) = show reg
     show (SingleByteReg reg) = show reg
     show (TwoByteReg reg) = show reg
     show (FourByteReg reg) = show reg
@@ -174,8 +188,8 @@ instance Show X86Instruction where
     show (MOVDoubleToStack offset src) =  printf "movsd [rbp-%d], %s"  offset (show src)
     show (MOVFromStack reg offset) = printf "mov %s, [rbp-%d]" (show reg) offset
     show (MOVDoubleFromStack reg offset) = printf "movsd %s, [rbp-%d]" (show reg) offset
-    show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI RSP bytes)) (show fromReg)
-    show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI RSP bytes))
+    show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI (WordReg RSP) bytes)) (show fromReg)
+    show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI (WordReg RSP) bytes))
     show (XOR reg1 reg2) = printf "xor %s, %s" (show reg1) (show reg2)
     show (DEBUG val) = val
     
