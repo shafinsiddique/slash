@@ -15,9 +15,10 @@ import Parser.Combinator
       spaceAndNewlineParser,
       wordParserWithSpaceNewline,
       wordParser,
+      runParser,
       oneOrMore,
       wordParserWithSpace,
-      Parser, zeroOrMore )
+      Parser(..), zeroOrMore, ParsingResult (ParsingSuccess, ParsingError) )
 
 import Parser.ProgramNode
 import Parser.IntegerExpressionParser
@@ -66,25 +67,36 @@ handleExpression _ expr maybeBool _ = case maybeBool of
                                     Just (sign, right) -> getBooleanExpression expr sign right
                                     Nothing -> expr
 
-handleIf :: String -> Expression -> String -> Expression -> String -> Expression -> Expression
+handleIf :: String -> BooleanOp -> String -> Expression -> String -> Expression -> Expression
 handleIf _ condition _ thenExp _ = IfExpr condition thenExp
 
 ifExpressionParser :: Parser Expression
 ifExpressionParser = handleIf <$> wordParserWithSpace "if"
-                    <*> expressionParser -- fix this later to just BooleanOp. 
+                    <*> booleanParser 
                     <*> wordParserWithSpace "then"
                     <*> expressionParser
                     <*> wordParserWithSpace "else"
                     <*> expressionParser
 
+trueFalseParser :: Parser BooleanOp 
+trueFalseParser = (\_ y _ -> if y == "True" then TrueFalseExpr True else TrueFalseExpr False) 
+    <$> spaceAndNewlineParser 
+    <*> anyOf [wordParser "True", wordParser "False"] 
+    <*> spaceAndNewlineParser
+
+booleanParser :: Parser BooleanOp
+booleanParser = anyOf [trueFalseParser]
+
 booleanExpressionParser :: Parser Expression
-booleanExpressionParser = (\_ y _ -> if y == "True" 
-    then BooleanOpExpr (TrueFalseExpr True) else BooleanOpExpr (TrueFalseExpr False)) <$> spaceAndNewlineParser <*> anyOf [wordParser "True", wordParser "False"] <*> spaceAndNewlineParser
+booleanExpressionParser = Parser 
+                    (\input -> case runParser booleanParser input of
+                            ParsingSuccess value rest -> ParsingSuccess (BooleanOpExpr value) rest
+                            ParsingError e -> ParsingError e)
 
 expressionParser :: Parser Expression
 expressionParser = handleExpression <$> spaceAndNewlineParser
-                <*> anyOf [stringParser, letExpressionParser, printExpressionParser, mathExpressionParser, 
-                ifExpressionParser, booleanExpressionParser]
+                <*> anyOf [stringParser, letExpressionParser, printExpressionParser, ifExpressionParser, mathExpressionParser, 
+                 booleanExpressionParser]
                 <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser
 

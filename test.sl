@@ -1,1 +1,3 @@
-println("Hello World\nHere's a boolean: %d", let x = True in x)
+if False 
+then println("hello") 
+else println("False")

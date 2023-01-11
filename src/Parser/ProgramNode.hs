@@ -24,7 +24,7 @@ data Expression = IntExpr Integer | DoubleExpr Double| Addition Expression Expre
                 | PrintExpr { toPrint :: String, expressions :: [Expression] } 
                 | VariableExpr String
                 | BooleanOpExpr BooleanOp
-                | IfExpr Expression Expression Expression
+                | IfExpr BooleanOp Expression Expression
                 deriving Show
 
                 

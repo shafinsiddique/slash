@@ -44,8 +44,8 @@ getStringAsm str destination state =
     let codeSection = [MOV (WR destination) strName] in
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
 
-getAsmOrAddToRemaining :: Expression -> [WordReg] -> [Expression] -> 
-            [X86Assembly] -> ProgramState -> [X86Instruction] -> 
+getAsmOrAddToRemaining :: Expression -> [WordReg] -> [Expression] ->
+            [X86Assembly] -> ProgramState -> [X86Instruction] ->
                 ([X86Assembly], [Expression], [WordReg], ProgramState, [X86Instruction])
 
 getAsmOrAddToRemaining expr [] remaining asms state pops = (asms, expr:remaining, [], state, pops)
@@ -53,13 +53,13 @@ getAsmOrAddToRemaining expr (reg:remainingReg) remaining asms state pops =
                 let regForDoubles = registerIsForDoubles reg in
                 let exprSize = 8 in
                 let pushInstr = if regForDoubles then PUSHDouble else PUSH in
-                let originalBytes = getBytesAllocated state in 
+                let originalBytes = getBytesAllocated state in
                 let (newAsm, newState) = generateAsmForExpression expr state reg in
-                let bytesAllocated = getBytesAllocated newState in 
-                let finalState = setBytes newState originalBytes in 
+                let bytesAllocated = getBytesAllocated newState in
+                let finalState = setBytes newState originalBytes in
                 let finalAsm = addCodeSection newAsm [ADDI (WR RSP) (bytesAllocated-originalBytes), pushInstr (WR reg)] in
                 let popInstr = if regForDoubles then POPDouble else POP in
-                (finalAsm:asms, remaining, remainingReg, addBytes finalState exprSize, 
+                (finalAsm:asms, remaining, remainingReg, addBytes finalState exprSize,
                 popInstr (WR reg):pops)
 
 getPrintExprsAsms :: [Expression] -> [Expression] -> [WordReg] -> [WordReg] -> Int ->
@@ -101,13 +101,12 @@ getDivRegistersAsm :: Register -> Register -> X86Assembly
 getDivRegistersAsm left right = getX86Assembly [MOVR (WR RAX) left, MOVI (WR RDX) 0, DIV right]
 
 {-
-
     variables 
     push 
     variables
     push 
-
 -}
+
 getPrintAsm :: String -> [Expression] -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm str expressions register state =
     let (strAsm, newState) = getStringAsm str RDI state in
@@ -164,7 +163,7 @@ getMathExprAsm2 expr reg state =
                     Multiplication left right -> (left, right, IMUL) in
         let leftReg =  R8 in
         let rightReg = R9 in
-        let (leftGen, rightGen) = (WR leftReg, WR rightReg) in 
+        let (leftGen, rightGen) = (WR leftReg, WR rightReg) in
         let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
         let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
         (mergeMultipleAsm
@@ -198,20 +197,20 @@ of this register. This can be calculated easily. THen we ZERO OUT THE ENTIRE REG
 
 getCorrespondingSingleByte :: WordReg -> Register
 getCorrespondingSingleByte RAX = SB AL
-getCorrespondingSingleByte RDI = SB DIL 
-getCorrespondingSingleByte RSI = SB SIL 
-getCorrespondingSingleByte RDX = SB DL 
-getCorrespondingSingleByte RCX = SB CL 
-getCorrespondingSingleByte R8 = SB R8B 
-getCorrespondingSingleByte R9 = SB R9B 
-getCorrespondingSingleByte R10 = SB R10B 
-getCorrespondingSingleByte R11 = SB R11B 
-getCorrespondingSingleByte R12 = SB R12B 
-getCorrespondingSingleByte R13 = SB R13B 
-getCorrespondingSingleByte R14 = SB R14B 
-getCorrespondingSingleByte R15 = SB R15B 
-getCorrespondingSingleByte RBP = SB BPL 
-getCorrespondingSingleByte RBX = SB BL 
+getCorrespondingSingleByte RDI = SB DIL
+getCorrespondingSingleByte RSI = SB SIL
+getCorrespondingSingleByte RDX = SB DL
+getCorrespondingSingleByte RCX = SB CL
+getCorrespondingSingleByte R8 = SB R8B
+getCorrespondingSingleByte R9 = SB R9B
+getCorrespondingSingleByte R10 = SB R10B
+getCorrespondingSingleByte R11 = SB R11B
+getCorrespondingSingleByte R12 = SB R12B
+getCorrespondingSingleByte R13 = SB R13B
+getCorrespondingSingleByte R14 = SB R14B
+getCorrespondingSingleByte R15 = SB R15B
+getCorrespondingSingleByte RBP = SB BPL
+getCorrespondingSingleByte RBX = SB BL
 getCorrespondingSingleByte RSP = SB SPL
 getCorrespondingSingleByte (DoubleReg val) = WR (DoubleReg val)
 
@@ -219,31 +218,31 @@ getCorrespondingSingleByte (DoubleReg val) = WR (DoubleReg val)
 getCorrespondingDoubleByte :: WordReg -> Register
 getCorrespondingDoubleByte RAX = TB AX
 getCorrespondingDoubleByte RDI = TB DI
-getCorrespondingDoubleByte RSI = TB SI 
-getCorrespondingDoubleByte RDX = TB DX 
-getCorrespondingDoubleByte RCX = TB CX 
-getCorrespondingDoubleByte R8 = TB R8W 
-getCorrespondingDoubleByte R9 = TB R9W 
-getCorrespondingDoubleByte R10 = TB R10W 
-getCorrespondingDoubleByte R11 = TB R11W 
+getCorrespondingDoubleByte RSI = TB SI
+getCorrespondingDoubleByte RDX = TB DX
+getCorrespondingDoubleByte RCX = TB CX
+getCorrespondingDoubleByte R8 = TB R8W
+getCorrespondingDoubleByte R9 = TB R9W
+getCorrespondingDoubleByte R10 = TB R10W
+getCorrespondingDoubleByte R11 = TB R11W
 getCorrespondingDoubleByte R12 = TB R12W
 getCorrespondingDoubleByte R13 = TB R13W
-getCorrespondingDoubleByte R14 = TB R14W 
-getCorrespondingDoubleByte R15 = TB R15W 
-getCorrespondingDoubleByte RBP = TB BP 
-getCorrespondingDoubleByte RBX = TB BX 
+getCorrespondingDoubleByte R14 = TB R14W
+getCorrespondingDoubleByte R15 = TB R15W
+getCorrespondingDoubleByte RBP = TB BP
+getCorrespondingDoubleByte RBX = TB BX
 getCorrespondingDoubleByte RSP = TB SP
 getCorrespondingDoubleByte (DoubleReg val) = WR (DoubleReg val)
 
 getCorrespondingFourByte :: WordReg -> Register
 getCorrespondingFourByte RAX = FB EAX
 getCorrespondingFourByte RDI = FB EDI
-getCorrespondingFourByte RSI = FB ESI 
-getCorrespondingFourByte RDX = FB EDX 
-getCorrespondingFourByte RCX = FB ECX 
+getCorrespondingFourByte RSI = FB ESI
+getCorrespondingFourByte RDX = FB EDX
+getCorrespondingFourByte RCX = FB ECX
 getCorrespondingFourByte R8 = FB R8D
 getCorrespondingFourByte R9 = FB R9D
-getCorrespondingFourByte R10 = FB R10D 
+getCorrespondingFourByte R10 = FB R10D
 getCorrespondingFourByte R11 = FB R11D
 getCorrespondingFourByte R12 = FB R12D
 getCorrespondingFourByte R13 = FB R13D
@@ -256,10 +255,10 @@ getCorrespondingFourByte (DoubleReg val) = WR (DoubleReg val)
 
 
 getCorrectReg :: WordReg -> Integer -> Register
-getCorrectReg reg size  
+getCorrectReg reg size
     | size <= 1 = getCorrespondingSingleByte reg
-    | size <= 2 = getCorrespondingDoubleByte reg 
-    | size <= 4 = getCorrespondingFourByte reg 
+    | size <= 2 = getCorrespondingDoubleByte reg
+    | size <= 4 = getCorrespondingFourByte reg
     | otherwise = WR reg
 
 getVariableExprAsm :: String -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
@@ -328,33 +327,31 @@ getBooleanExprAsm expr reg state =
     -- let comparisonCode = getEqualityCode left leftReg rightReg reg in
     -- (mergeAsm mergedAsm comparisonCode, rightState)
 
-getIfExprAsm :: Expression -> Expression -> Expression -> WordReg -> ProgramState ->
+getIfExprAsm :: BooleanOp -> Expression -> Expression -> WordReg -> ProgramState ->
                                                                     (X86Assembly , ProgramState)
 
 getIfExprAsm cond thenExp elseExp reg state =
-    case cond of
-        BooleanOpExpr boolExp ->
-            (let scratchReg = R10 in
-            let (condAsm, condState) = generateAsmForExpression cond state scratchReg in
-            let newIf = createNewIf condState in
-            let ifId = getIfCounter newIf in
-            let ifBranchLabel = printf "if_branch_%d" ifId in
-            let elseBranchlabel = printf "else_branch_%d" ifId in
-            let continueBranchLabel = printf "continue_%d" ifId in
-            let mainSectionAsm = addCodeSection condAsm [CMPRI (WR scratchReg) 0,
-                                                            JZ ifBranchLabel, JMP elseBranchlabel] in
-            let (ifBranchAsm, ifBranchState) = generateAsmForExpression thenExp newIf reg in
-            let (elseBranchAsm, finalState) = generateAsmForExpression elseExp ifBranchState reg in
+    let scratchReg = R10 in
+    let (condAsm, condState) = getBooleanExprAsm cond scratchReg state  in
+    let newIf = createNewIf condState in
+    let ifId = getIfCounter newIf in
+    let ifBranchLabel = printf "if_branch_%d" ifId in
+    let elseBranchlabel = printf "else_branch_%d" ifId in
+    let continueBranchLabel = printf "continue_%d" ifId in
+    let mainSectionAsm = addCodeSection condAsm [CMPRI (WR scratchReg) 1,
+                                                           JZ ifBranchLabel, JMP elseBranchlabel] in
+    let (ifBranchAsm, ifBranchState) = generateAsmForExpression thenExp newIf reg in
+    let (elseBranchAsm, finalState) = generateAsmForExpression elseExp ifBranchState reg in
 
-            let finalIf = mergeMultipleAsm [getX86Assembly [Section ifBranchLabel], ifBranchAsm,
-                                                    getX86Assembly [JMP continueBranchLabel]] in
+    let finalIf = mergeMultipleAsm [getX86Assembly [Section ifBranchLabel], ifBranchAsm,
+                                                   getX86Assembly [JMP continueBranchLabel]] in
 
-            let finalElse = mergeMultipleAsm [getX86Assembly [Section elseBranchlabel],
-                                            elseBranchAsm, getX86Assembly [JMP continueBranchLabel]] in
+    let finalElse = mergeMultipleAsm [getX86Assembly [Section elseBranchlabel],
+                                           elseBranchAsm, getX86Assembly [JMP continueBranchLabel]] in
 
-            (mergeMultipleAsm [mainSectionAsm, finalIf, finalElse, getX86Assembly [Section continueBranchLabel]], finalState ))
+    (mergeMultipleAsm [mainSectionAsm, finalIf, finalElse, getX86Assembly [Section continueBranchLabel]], finalState )
 
-        _ -> (getEmptyX86Asm, state)
+
 
 
 getDoubleExprAsm :: Double -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
