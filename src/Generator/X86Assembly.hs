@@ -7,27 +7,39 @@ import Data.List
 
 data DoubleRegister = XMM0 | XMM1 | XMM2 | XMM3 | XMM4 | XMM5 | XMM6 | XMM7
 
-data SingleByteReg = R8B | R9B | R10B | DIL | SIL | DL | CL 
+data SingleByteReg = AL | DIL | SIL | DL | CL | R8B | R9B | R10B | R11B | R12B | R13B | R14B | R15B 
+                    | SPL | BL | BPL 
 
-data TwoByteReg = AX | DI | SI | DX | CX | R8W | R9W | R10W | SP | BX | BP
+data TwoByteReg = AX | DI | SI | DX | CX | R8W | R9W | R10W | SP | BX | BP  
+            | R11W | R12W | R13W | R14W | R15W
 
-data FourByteReg = EAX | EDI | ESI | EDX  | ECX | R8D | R9D | R10D | R11D
+data FourByteReg = EAX | EDI | ESI | EDX  | ECX | R8D | R9D 
+            | R10D | R11D | R12D | R13D | R14D | R15D | ESP | EBX | EBP
 
 data WordReg = RDI | RSI | RBP | RAX | R8 | R9 | RSP | R10 | R11 | RCX | RDX | RBX | R12 
-                    | R13 | R14 | R15 | RIP |
+                    | R13 | R14 | R15 |
                     DoubleReg DoubleRegister 
 
-data Register =  WordReg WordReg | SingleByteReg SingleByteReg | TwoByteReg TwoByteReg
-                    | FourByteReg FourByteReg
+data Register =  WR WordReg | SB SingleByteReg | TB TwoByteReg
+                    | FB FourByteReg
 
 instance Show SingleByteReg where
+    show AL = "al"
+    show DIL = "dil"
+    show SIL = "sil"
+    show DL = "dl"
+    show CL = "cl"
     show R8B = "r8b"
     show R9B = "r9b"
     show R10B = "r10b"
-    show DIL = "dil"
-    show SIL = "sil"
-    show DL =  "dl"
-    show CL = "cl"
+    show R11B = "r11b"
+    show R12B = "r12b"
+    show R13B = "r13b"
+    show R14B = "r14b"
+    show R15B = "r15b"
+    show SPL = "spl"
+    show BL = "bl"
+    show BPL = "bpl"
 
 instance Show TwoByteReg where
     show AX = "ax"
@@ -38,9 +50,14 @@ instance Show TwoByteReg where
     show R8W = "r8w"
     show R9W = "r9w"
     show R10W = "r10w"
+    show R11W = "r11w"
     show SP = "sp"
     show BX = "bx"
     show BP = "bp"
+    show R12W = "r12w"
+    show R13W = "r13w"
+    show R14W = "r14w"
+    show R15W = "r15w"
 
 instance Show FourByteReg where
     show EAX = "eax"
@@ -52,6 +69,13 @@ instance Show FourByteReg where
     show R10D = "R10D"
     show R11D = "r11d"
     show ECX = "ecx"
+    show ESP = "esp"
+    show R12D = "r12d"
+    show R13D = "r13d"
+    show R14D = "r14d"
+    show R15D = "r15d"
+    show EBX = "ebx"
+    show EBP = "ebp"
 
 instance Show DoubleRegister where
     show XMM0 = "xmm0"
@@ -76,7 +100,6 @@ instance Show WordReg where
     show R11 = "r11"
     show RCX = "rcx"
     show RDX = "rdx"
-    show RIP = "rip"
     show RBX = "rbx"
     show R12 = "r12"
     show R13 = "r13"
@@ -86,10 +109,10 @@ instance Show WordReg where
 
 
 instance Show Register where
-    show (WordReg reg) = show reg
-    show (SingleByteReg reg) = show reg
-    show (TwoByteReg reg) = show reg
-    show (FourByteReg reg) = show reg
+    show (WR reg) = show reg
+    show (SB reg) = show reg
+    show (TB reg) = show reg
+    show (FB reg) = show reg
     
 
 data X86Instruction = MOV Register String | CALL String |
@@ -188,8 +211,8 @@ instance Show X86Instruction where
     show (MOVDoubleToStack offset src) =  printf "movsd [rbp-%d], %s"  offset (show src)
     show (MOVFromStack reg offset) = printf "mov %s, [rbp-%d]" (show reg) offset
     show (MOVDoubleFromStack reg offset) = printf "movsd %s, [rbp-%d]" (show reg) offset
-    show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI (WordReg RSP) bytes)) (show fromReg)
-    show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI (WordReg RSP) bytes))
+    show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI (WR RSP) bytes)) (show fromReg)
+    show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI (WR RSP) bytes))
     show (XOR reg1 reg2) = printf "xor %s, %s" (show reg1) (show reg2)
     show (DEBUG val) = val
     

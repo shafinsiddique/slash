@@ -20,15 +20,15 @@ data RegisterDivisons = RegisterDivision
 getInitialAsm :: X86Assembly
 getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", Extern "_printf",
                                                                     Extern "_strcmp",
-                                                                    StartMain, PUSH (WordReg RBP),
-                                                                    MOVR (WordReg RBP) (WordReg RSP)] in
+                                                                    StartMain, PUSH (WR RBP),
+                                                                    MOVR (WR RBP) (WR RSP)] in
     X86Assembly {dataSection =
         [DataSection], codeSection = codeSection}
 
 
 getEndingAsm :: ProgramState -> X86Assembly
 getEndingAsm state = X86Assembly {dataSection = [], codeSection =
-        [ADDI (WordReg RSP) (getBytesAllocated state), POP (WordReg RBP), MOV (WordReg RAX) "0", RET]}
+        [ADDI (WR RSP) (getBytesAllocated state), POP (WR RBP), MOV (WR RAX) "0", RET]}
 
 getDataConstName :: Integer -> String
 getDataConstName = printf "const_%d"
@@ -41,13 +41,8 @@ getStringAsm str destination state =
     let newId = getConstId newState in
     let strName = getDataConstName newId in
     let dataSection = [X86StringConst strName str] in
-    let codeSection = [MOV (WordReg destination) strName] in
+    let codeSection = [MOV (WR destination) strName] in
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
-
-getRegisterSize :: Register -> Integer
-getRegisterSize (DoubleReg _) = 8
-getRegisterSize (SingleByteReg _) = 1
-getRegisterSize _ = 8
 
 getAsmOrAddToRemaining :: Expression -> [WordReg] -> [Expression] -> 
             [X86Assembly] -> ProgramState -> [X86Instruction] -> 
@@ -62,10 +57,10 @@ getAsmOrAddToRemaining expr (reg:remainingReg) remaining asms state pops =
                 let (newAsm, newState) = generateAsmForExpression expr state reg in
                 let bytesAllocated = getBytesAllocated newState in 
                 let finalState = setBytes newState originalBytes in 
-                let finalAsm = addCodeSection newAsm [ADDI (WordReg RSP) (bytesAllocated-originalBytes), pushInstr (WordReg reg)] in
+                let finalAsm = addCodeSection newAsm [ADDI (WR RSP) (bytesAllocated-originalBytes), pushInstr (WR reg)] in
                 let popInstr = if regForDoubles then POPDouble else POP in
                 (finalAsm:asms, remaining, remainingReg, addBytes finalState exprSize, 
-                popInstr (WordReg reg):pops)
+                popInstr (WR reg):pops)
 
 getPrintExprsAsms :: [Expression] -> [Expression] -> [WordReg] -> [WordReg] -> Int ->
     [X86Assembly] -> ProgramState -> [X86Instruction] -> Integer -> ([X86Assembly], [Expression], Int, ProgramState, [X86Instruction])
@@ -88,11 +83,11 @@ evaluateExprStoreToStack :: Expression -> WordReg -> WordReg ->
 evaluateExprStoreToStack expression regularReg doubleReg offset state =
         if expressionHasDouble expression state then
                let (newAsm, newState) = generateAsmForExpression expression state doubleReg in
-                (mergeMultipleAsm [newAsm, getX86Assembly [MOVFloatToMem (WordReg RSP) offset (WordReg doubleReg) ]], newState)
+                (mergeMultipleAsm [newAsm, getX86Assembly [MOVFloatToMem (WR RSP) offset (WR doubleReg) ]], newState)
 
             else
                 let (newAsm, newState) = generateAsmForExpression expression state regularReg in
-                (mergeMultipleAsm [newAsm, getX86Assembly [MOVPToMem (WordReg RSP) offset (WordReg regularReg)]], newState)
+                (mergeMultipleAsm [newAsm, getX86Assembly [MOVPToMem (WR RSP) offset (WR regularReg)]], newState)
 
 
 getRemainingExprsToStackAsm :: [Expression] -> WordReg -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
@@ -103,7 +98,7 @@ getRemainingExprsToStackAsm expressions regularReg doubleReg state =
     (newAsm, newState)
 
 getDivRegistersAsm :: Register -> Register -> X86Assembly
-getDivRegistersAsm left right = getX86Assembly [MOVR (WordReg RAX) left, MOVI (WordReg RDX) 0, DIV right]
+getDivRegistersAsm left right = getX86Assembly [MOVR (WR RAX) left, MOVI (WR RDX) 0, DIV right]
 
 {-
 
@@ -125,9 +120,9 @@ getPrintAsm str expressions register state =
         let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
         let stackTopOffset = fromIntegral stackSize `div` 8 in
            (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops,
-                        getX86Assembly [MOVR (WordReg R11) (WordReg RDX), MOVI (WordReg R10) 16], getDivRegistersAsm (WordReg RSP) (WordReg R10),
-                        getX86Assembly [SUB (WordReg RSP) (WordReg RDX), SUBI (WordReg RSP) 32, MOVPToMem (WordReg RSP) 0 (WordReg regularReg), MOVFloatToMem (WordReg RSP) 1 (WordReg doubleReg), MOVPToMem (WordReg RSP) 2 (WordReg RDX), SUBI (WordReg RSP) stackSize, MOVR (WordReg RDX) (WordReg R11)],
-        remainingAsm, getX86Assembly [MOVPFromMem (WordReg regularReg) stackTopOffset (WordReg RSP), MOVFloatFromMem (WordReg doubleReg) (stackTopOffset+1) (WordReg RSP), MOVI (WordReg RAX) (toInteger doublesCount), CALL "_printf", ADDI (WordReg RSP) (stackSize + 16), POP (WordReg RDX), ADDI (WordReg RSP) 8, ADD (WordReg RSP) (WordReg RDX)]], finalState)
+                        getX86Assembly [MOVR (WR R11) (WR RDX), MOVI (WR R10) 16], getDivRegistersAsm (WR RSP) (WR R10),
+                        getX86Assembly [SUB (WR RSP) (WR RDX), SUBI (WR RSP) 32, MOVPToMem (WR RSP) 0 (WR regularReg), MOVFloatToMem (WR RSP) 1 (WR doubleReg), MOVPToMem (WR RSP) 2 (WR RDX), SUBI (WR RSP) stackSize, MOVR (WR RDX) (WR R11)],
+        remainingAsm, getX86Assembly [MOVPFromMem (WR regularReg) stackTopOffset (WR RSP), MOVFloatFromMem (WR doubleReg) (stackTopOffset+1) (WR RSP), MOVI (WR RAX) (toInteger doublesCount), CALL "_printf", ADDI (WR RSP) (stackSize + 16), POP (WR RDX), ADDI (WR RSP) 8, ADD (WR RSP) (WR RDX)]], finalState)
 
 registerIsForDoubles :: WordReg -> Bool
 registerIsForDoubles (DoubleReg _) = True
@@ -139,7 +134,7 @@ createAndAddSymbol = addSymbol
 getIntExprAsm :: Integer -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getIntExprAsm value reg state =
     if registerIsForDoubles reg then getDoubleExprAsm (fromIntegral value) reg state else
-    (getX86Assembly [MOVI (WordReg reg) value], state)
+    (getX86Assembly [MOVI (WR reg) value], state)
 
 
 
@@ -156,7 +151,7 @@ getMathExprDoubleAsm expr reg state =
             let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
             let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
             (mergeMultipleAsm [leftAsm, getX86Assembly
-                        [SUBI (WordReg RSP) 8, MOVFloatToMem (WordReg RSP) 0 (WordReg leftReg)], rightAsm, getX86Assembly [MOVFloatFromMem (WordReg leftReg) 0 (WordReg RSP), ADDI (WordReg RSP) 8, instr (WordReg leftReg) (WordReg rightReg), MOVSD (WordReg reg) (WordReg leftReg)]], rightState)
+                        [SUBI (WR RSP) 8, MOVFloatToMem (WR RSP) 0 (WR leftReg)], rightAsm, getX86Assembly [MOVFloatFromMem (WR leftReg) 0 (WR RSP), ADDI (WR RSP) 8, instr (WR leftReg) (WR rightReg), MOVSD (WR reg) (WR leftReg)]], rightState)
 
 getMathExprAsm2 :: Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getMathExprAsm2 expr reg state =
@@ -169,13 +164,13 @@ getMathExprAsm2 expr reg state =
                     Multiplication left right -> (left, right, IMUL) in
         let leftReg =  R8 in
         let rightReg = R9 in
-        let (leftGen, rightGen) = (WordReg leftReg, WordReg rightReg) in 
+        let (leftGen, rightGen) = (WR leftReg, WR rightReg) in 
         let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
         let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
         (mergeMultipleAsm
                 [leftAsm, getX86Assembly [PUSH  leftGen], rightAsm,
                 getX86Assembly [POP leftGen, instr leftGen rightGen,
-                            MOVR (WordReg reg) leftGen]], rightState))
+                            MOVR (WR reg) leftGen]], rightState))
 
 getDivExprAsm :: Expression -> Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getDivExprAsm left right reg state =
@@ -185,9 +180,9 @@ getDivExprAsm left right reg state =
         let rightReg = R9 in
         let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
         let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-        let ending = getX86Assembly [POP leftReg, MOVI RDX 0, MOVR RAX leftReg,
-                DIV rightReg, MOVR reg RAX] in
-        (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH leftReg], rightAsm, ending], rightState)
+        let ending = getX86Assembly [POP (WR leftReg), MOVI (WR RDX) 0, MOVR (WR RAX) (WR leftReg),
+                DIV (WR rightReg), MOVR (WR reg) (WR RAX)] in
+        (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH (WR leftReg)], rightAsm, ending], rightState)
 
 {-
 Expr size can not be bigger than max register size. If it is, the pointer should be stored. 
@@ -196,28 +191,86 @@ Expr size can not be bigger than max register size. If it is, the pointer should
 
 -}
 
-getRegWithSize :: Integer -> RegisterDivisons -> Register
-getRegWithSize exprSize (RegisterDivision one two four eight)
-  | exprSize <= 1 = one
-  | exprSize <= 2 = two
-  | exprSize <= 4 = four
-  | otherwise =
-    eight
-
-
 {-
 If it's a 1 byte data, but we get a  8 byte register,we need the corresponding single byte portion
 of this register. This can be calculated easily. THen we ZERO OUT THE ENTIRE REGISTER (since we're only writing to a specific portion, this is important). Then we move it to the appropriate register. 
 -}
+
+getCorrespondingSingleByte :: WordReg -> Register
+getCorrespondingSingleByte RAX = SB AL
+getCorrespondingSingleByte RDI = SB DIL 
+getCorrespondingSingleByte RSI = SB SIL 
+getCorrespondingSingleByte RDX = SB DL 
+getCorrespondingSingleByte RCX = SB CL 
+getCorrespondingSingleByte R8 = SB R8B 
+getCorrespondingSingleByte R9 = SB R9B 
+getCorrespondingSingleByte R10 = SB R10B 
+getCorrespondingSingleByte R11 = SB R11B 
+getCorrespondingSingleByte R12 = SB R12B 
+getCorrespondingSingleByte R13 = SB R13B 
+getCorrespondingSingleByte R14 = SB R14B 
+getCorrespondingSingleByte R15 = SB R15B 
+getCorrespondingSingleByte RBP = SB BPL 
+getCorrespondingSingleByte RBX = SB BL 
+getCorrespondingSingleByte RSP = SB SPL
+getCorrespondingSingleByte (DoubleReg val) = WR (DoubleReg val)
+
+
+getCorrespondingDoubleByte :: WordReg -> Register
+getCorrespondingDoubleByte RAX = TB AX
+getCorrespondingDoubleByte RDI = TB DI
+getCorrespondingDoubleByte RSI = TB SI 
+getCorrespondingDoubleByte RDX = TB DX 
+getCorrespondingDoubleByte RCX = TB CX 
+getCorrespondingDoubleByte R8 = TB R8W 
+getCorrespondingDoubleByte R9 = TB R9W 
+getCorrespondingDoubleByte R10 = TB R10W 
+getCorrespondingDoubleByte R11 = TB R11W 
+getCorrespondingDoubleByte R12 = TB R12W
+getCorrespondingDoubleByte R13 = TB R13W
+getCorrespondingDoubleByte R14 = TB R14W 
+getCorrespondingDoubleByte R15 = TB R15W 
+getCorrespondingDoubleByte RBP = TB BP 
+getCorrespondingDoubleByte RBX = TB BX 
+getCorrespondingDoubleByte RSP = TB SP
+getCorrespondingDoubleByte (DoubleReg val) = WR (DoubleReg val)
+
+getCorrespondingFourByte :: WordReg -> Register
+getCorrespondingFourByte RAX = FB EAX
+getCorrespondingFourByte RDI = FB EDI
+getCorrespondingFourByte RSI = FB ESI 
+getCorrespondingFourByte RDX = FB EDX 
+getCorrespondingFourByte RCX = FB ECX 
+getCorrespondingFourByte R8 = FB R8D
+getCorrespondingFourByte R9 = FB R9D
+getCorrespondingFourByte R10 = FB R10D 
+getCorrespondingFourByte R11 = FB R11D
+getCorrespondingFourByte R12 = FB R12D
+getCorrespondingFourByte R13 = FB R13D
+getCorrespondingFourByte R14 = FB R14D
+getCorrespondingFourByte R15 = FB R15D
+getCorrespondingFourByte RBP = FB EBP
+getCorrespondingFourByte RBX = FB EBX
+getCorrespondingFourByte RSP = FB ESP
+getCorrespondingFourByte (DoubleReg val) = WR (DoubleReg val)
+
+
+getCorrectReg :: WordReg -> Integer -> Register
+getCorrectReg reg size  
+    | size <= 1 = getCorrespondingSingleByte reg
+    | size <= 2 = getCorrespondingDoubleByte reg 
+    | size <= 4 = getCorrespondingFourByte reg 
+    | otherwise = WR reg
+
 getVariableExprAsm :: String -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getVariableExprAsm name reg state =
     case findVariable state name of
         Just VariableInfo {offset = offset, exprType = exprType} ->
                 if registerIsForDoubles reg
-                    then (getX86Assembly [MOVDoubleFromStack reg offset], state)
+                    then (getX86Assembly [MOVDoubleFromStack (WR reg) offset], state)
                 else
                     let correctReg = getCorrectReg reg (getExprSize exprType) in
-                        (getX86Assembly [XOR reg reg, MOVFromStack correctReg offset], state)
+                        (getX86Assembly [XOR (WR reg) (WR reg), MOVFromStack correctReg offset], state)
 
             -- (getX86Assembly [instr correctReg offset], state)
         Nothing -> (getEmptyX86Asm, state)
@@ -232,7 +285,7 @@ getLetExprAsm name value expr reg state =
     let stateWithNewSymbol = addSymbol valState name exprType in
     let movInstr = if registerIsForDoubles scratchRegister then MOVDoubleToStack else MOVToStack in
     let addToStackAsm = addCodeSection valAsm
-                [SUBI (WordReg RSP) (getExprSize exprType), movInstr symbolOffset (WordReg scratchRegister)] in
+                [SUBI (WR RSP) (getExprSize exprType), movInstr symbolOffset (WR scratchRegister)] in
     let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
     (mergeAsm addToStackAsm exprAsm, finalState)
 
@@ -240,8 +293,8 @@ getMathEqualityCode :: Register -> Register -> Register -> X86Assembly
 getMathEqualityCode leftReg rightReg dest = getX86Assembly [SUB leftReg rightReg, MOVR dest leftReg]
 
 getStrEqualityCode :: Register -> Register -> Register -> X86Assembly
-getStrEqualityCode leftReg rightReg dest = getX86Assembly [MOVR (WordReg RDI) leftReg, MOVR (WordReg RSI) rightReg,
-                                            CALL "_strcmp", MOVR dest (WordReg RAX)]
+getStrEqualityCode leftReg rightReg dest = getX86Assembly [MOVR (WR RDI) leftReg, MOVR (WR RSI) rightReg,
+                                            CALL "_strcmp", MOVR dest (WR RAX)]
 
 getEqualityCode :: Expression -> Register -> Register -> Register -> X86Assembly
 getEqualityCode expr leftReg rightReg dest = case expr of
@@ -259,7 +312,7 @@ println("%b", let x = True in x -- (rdi))
 -}
 getTrueFalseExprAsm :: Bool -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getTrueFalseExprAsm val reg state = let intRepresentation = if val then 1 else 0 in
-    (getX86Assembly [MOVI (WordReg reg) intRepresentation], state)
+    (getX86Assembly [MOVI (WR reg) intRepresentation], state)
 
 getBooleanExprAsm :: BooleanOp -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getBooleanExprAsm expr reg state =
@@ -288,7 +341,7 @@ getIfExprAsm cond thenExp elseExp reg state =
             let ifBranchLabel = printf "if_branch_%d" ifId in
             let elseBranchlabel = printf "else_branch_%d" ifId in
             let continueBranchLabel = printf "continue_%d" ifId in
-            let mainSectionAsm = addCodeSection condAsm [CMPRI (WordReg scratchReg) 0,
+            let mainSectionAsm = addCodeSection condAsm [CMPRI (WR scratchReg) 0,
                                                             JZ ifBranchLabel, JMP elseBranchlabel] in
             let (ifBranchAsm, ifBranchState) = generateAsmForExpression thenExp newIf reg in
             let (elseBranchAsm, finalState) = generateAsmForExpression elseExp ifBranchState reg in
@@ -307,7 +360,7 @@ getIfExprAsm cond thenExp elseExp reg state =
 getDoubleExprAsm :: Double -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getDoubleExprAsm value reg state =
     let newState = addDouble state value in
-    let asm = getX86Assembly [MOVUPS (WordReg reg) doublesArrayConst (findDouble newState value)] in
+    let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
     (asm, newState)
 
 generateAsmForExpression :: Expression -> ProgramState -> WordReg -> (X86Assembly, ProgramState)
@@ -329,10 +382,10 @@ generateAsmForExpression expression state register =
     (newAsm, newState)
 
 getStackAllocationAsm :: Integer -> X86Assembly
-getStackAllocationAsm val = addCodeSection getEmptyX86Asm [SUBI (WordReg RSP) val]
+getStackAllocationAsm val = addCodeSection getEmptyX86Asm [SUBI (WR RSP) val]
 
 getStackCleanupAsm :: Integer -> X86Assembly
-getStackCleanupAsm val = addCodeSection getEmptyX86Asm [ADDI (WordReg RSP) val]
+getStackCleanupAsm val = addCodeSection getEmptyX86Asm [ADDI (WR RSP) val]
 
 getStackSize :: ProgramState -> Integer
 getStackSize state = let tableSize = getSymbolTableSize state in
@@ -382,12 +435,6 @@ getExprType (StringExpr _) state = StrType
 
 getExprType expr state = if expressionHasDouble expr state then DoubleType else IntType
 
-getOutputRegisterFromType :: ExpressionType  -> Register
-getOutputRegisterFromType exprType = case exprType of
-    DoubleType -> WordReg (DoubleReg XMM0)
-    BoolType -> SingleByteReg R8B
-    _ -> WordReg R8
-
 getOutputRegister :: Expression -> ProgramState -> WordReg
 getOutputRegister expr state = if expressionHasDouble expr state then DoubleReg XMM0 else R8
 
@@ -397,6 +444,17 @@ generateAsmForExpressions [] (asm, state) = (asm, state)
 generateAsmForExpressions (x:xs) (asm, state) =
     let (newAsm, newState) =  generateAsmForExpression x state (getOutputRegister x state) in
         generateAsmForExpressions xs (mergeAsm asm newAsm, newState)
+
+generateX86 :: [Expression] -> X86Assembly
+generateX86 expressions =
+    let oldAsm = getInitialAsm in
+    let symbolTable = getNewSymbolTable in
+    let state = getInitialState in
+    let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
+    let asmWithDoubles = addDataSection newAsm
+                                [DoublesArray doublesArrayConst (getDoubleValues finalState)] in
+    mergeMultipleAsm [oldAsm, asmWithDoubles, getEndingAsm finalState]
+
 {-
 
 Next Steps :
@@ -409,13 +467,3 @@ Next Steps :
     - Recursion
 
 -}
-generateX86 :: [Expression] -> X86Assembly
-generateX86 expressions =
-    let oldAsm = getInitialAsm in
-    let symbolTable = getNewSymbolTable in
-    let state = getInitialState in
-    let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
-    let asmWithDoubles = addDataSection newAsm
-                                [DoublesArray doublesArrayConst (getDoubleValues finalState)] in
-    mergeMultipleAsm [oldAsm, asmWithDoubles, getEndingAsm finalState]
-
