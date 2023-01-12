@@ -1,6 +1,11 @@
-module Parser.VariableNameParser (variableNameParser,variableExpressionParser) where
+module Parser.VariableNameParser (variableNameParser,variableExpressionParser, anyLetterOrNumberParser) where
 import Parser.Combinator
 import Parser.ProgramNode ( Expression(VariableExpr) )
+
+anyLetterOrNumberParser :: Parser String
+anyLetterOrNumberParser = oneOrMore 
+                    (anyOf (map charParser (['a','b'..'z']++['A','B'..'Z']++
+                                ['0','1'..'9'])))
 
 variableNameParser :: Parser [Char]
 variableNameParser = (\ _ y _ -> y) <$> spaceParser

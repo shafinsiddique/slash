@@ -371,7 +371,7 @@ generateAsmForExpression expression state register =
                 Multiplication _ _ -> getMathExprAsm2 expression register state
                 Division left right -> getDivExprAsm left right register state
                 StringExpr value ->  getStringAsm value register state
-                LetExpr name value expr -> getLetExprAsm name value expr register state
+                LetExpr name typeName value expr -> getLetExprAsm name value expr register state
                 VariableExpr name -> getVariableExprAsm name register state
                 BooleanOpExpr booleanExpr -> getBooleanExprAsm booleanExpr register state
                 IfExpr cond thenExp elseExp -> getIfExprAsm cond thenExp elseExp register state
@@ -409,7 +409,7 @@ _expressionHasDouble (VariableExpr name) state =
             _ -> False
         Nothing -> False
 
-_expressionHasDouble (LetExpr name value result) state =
+_expressionHasDouble (LetExpr name _ value result) state =
     let newState = createAndAddSymbol state name (getExprType value state) in
         _expressionHasDouble result newState
 
@@ -419,7 +419,7 @@ expressionHasDouble :: Expression -> ProgramState -> Bool
 expressionHasDouble = _expressionHasDouble
 
 getExprType :: Expression -> ProgramState -> ExpressionType
-getExprType (LetExpr name value result) state =
+getExprType (LetExpr name _ value result) state =
     let newState = createAndAddSymbol state name (getExprType value state) in
         getExprType result newState
 getExprType (VariableExpr name) state = case findVariable state name of

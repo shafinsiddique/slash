@@ -4,7 +4,8 @@ module Parser.ExpressionParser
     printExpressionParser,
     letExpressionParser,
     ifExpressionParser,
-    programParser
+    programParser,
+    typeNameParser,
 
 ) where
 
@@ -24,17 +25,20 @@ import Parser.ProgramNode
 import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser, stringParser1)
-import Parser.VariableNameParser(variableNameParser, variableExpressionParser)
+import Parser.VariableNameParser(variableNameParser, variableExpressionParser, anyLetterOrNumberParser)
 
 
-handleLetExpression :: String -> String -> Char -> Expression -> String -> Expression -> Expression
-handleLetExpression _ varName _ varExp _ = LetExpr varName varExp
+handleLetExpression :: String -> String -> String -> String -> Char -> Expression -> String -> Expression -> Expression
+handleLetExpression _ varName _ typeName _ value _ expr = LetExpr {variableName =
+        varName, typeName = typeName, value = value, expression = expr}
 
 -- let x = 2 + 2 in x + 2
 letExpressionParser :: Parser Expression
 letExpressionParser = handleLetExpression
                 <$> wordParserWithSpace "let" -- let
                 <*> variableNameParser -- variable name
+                <*> wordParserWithSpace ":"
+                <*> (const <$> typeNameParser <*> spaceAndNewlineParser)
                 <*> charParser '='
                 <*> expressionParser
                 <*> wordParserWithSpace "in"
@@ -55,7 +59,7 @@ printExpressionParser :: Parser Expression
 printExpressionParser = handlePrintStatementParser <$> wordParserWithSpace "println"
                     <*> charParser '('
                     <*> stringParser1
-                    <*> zeroOrMore 
+                    <*> zeroOrMore
                         ((\_ _ x -> x) <$> spaceAndNewlineParser <*> charParser ',' <*> expressionParser)
                     <*> charParser ')'
 
@@ -72,30 +76,38 @@ handleIf _ condition _ thenExp _ = IfExpr condition thenExp
 
 ifExpressionParser :: Parser Expression
 ifExpressionParser = handleIf <$> wordParserWithSpace "if"
-                    <*> booleanParser 
+                    <*> booleanParser
                     <*> wordParserWithSpace "then"
                     <*> expressionParser
                     <*> wordParserWithSpace "else"
                     <*> expressionParser
 
-trueFalseParser :: Parser BooleanOp 
-trueFalseParser = (\_ y _ -> if y == "True" then TrueFalseExpr True else TrueFalseExpr False) 
-    <$> spaceAndNewlineParser 
-    <*> anyOf [wordParser "True", wordParser "False"] 
+trueFalseParser :: Parser BooleanOp
+trueFalseParser = (\_ y _ -> if y == "True" then TrueFalseExpr True else TrueFalseExpr False)
+    <$> spaceAndNewlineParser
+    <*> anyOf [wordParser "True", wordParser "False"]
     <*> spaceAndNewlineParser
 
 booleanParser :: Parser BooleanOp
 booleanParser = anyOf [trueFalseParser]
 
 booleanExpressionParser :: Parser Expression
-booleanExpressionParser = Parser 
+booleanExpressionParser = Parser
                     (\input -> case runParser booleanParser input of
                             ParsingSuccess value rest -> ParsingSuccess (BooleanOpExpr value) rest
                             ParsingError e -> ParsingError e)
 
+typeNameParser :: Parser String
+typeNameParser = (\x y -> case y of
+                    Just val -> x:val
+                    Nothing -> [x]) <$> anyOf (map charParser ['A','B'..'Z'])
+                <*> optionalParser anyLetterOrNumberParser
+
+
+
 expressionParser :: Parser Expression
 expressionParser = handleExpression <$> spaceAndNewlineParser
-                <*> anyOf [stringParser, letExpressionParser, printExpressionParser, ifExpressionParser, mathExpressionParser, 
+                <*> anyOf [stringParser, letExpressionParser, printExpressionParser, ifExpressionParser, mathExpressionParser,
                  booleanExpressionParser]
                 <*> optionalParser booleanOperationParser
                 <*> spaceAndNewlineParser

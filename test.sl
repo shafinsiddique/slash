@@ -1,5 +1,3 @@
-if True
-then 
-    let x = 42 in 
-        println("%d", x)
-else println("False")
+let x: Int = 4 in 
+let y: Int = 5 in
+println("%d", x+y)

@@ -12,6 +12,7 @@ data ProgramState = ProgramState {symbolTable :: SymbolTable, constCounter :: In
 getInitialDoublesSection :: DoublesSection
 getInitialDoublesSection = DoublesSection {values = [], valuesMap = Data.Map.empty}
 
+
 createNewConst :: ProgramState -> ProgramState
 createNewConst (ProgramState table num ifCounter doubles bytes) =
              ProgramState table (num+1) ifCounter doubles bytes

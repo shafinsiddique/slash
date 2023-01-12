@@ -14,13 +14,14 @@ data BooleanSign = Equality
 instance Show BooleanSign where
     show Equality = "=="
 
+
 data BooleanOp = EqualityExpr Expression Expression | TrueFalseExpr Bool deriving Show
 
 data Expression = IntExpr Integer | DoubleExpr Double| Addition Expression Expression 
                 | Subtraction Expression Expression
                 | Multiplication Expression Expression | Division Expression Expression 
                 | StringExpr String
-                | LetExpr String Expression Expression
+                | LetExpr {variableName :: String, typeName :: String,  value::Expression, expression::Expression}
                 | PrintExpr { toPrint :: String, expressions :: [Expression] } 
                 | VariableExpr String
                 | BooleanOpExpr BooleanOp
