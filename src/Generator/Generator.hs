@@ -456,8 +456,6 @@ generateX86 expressions =
 
 Next Steps :
 
-    - Add Type Declarations
-    - Add Boolean as a type + Printing Booleans.
     - Function definitions
     - Custom Types
     - Lists

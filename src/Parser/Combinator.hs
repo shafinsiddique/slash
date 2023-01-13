@@ -33,12 +33,12 @@ data ParsingResult a = ParsingSuccess a String | ParsingError String deriving Sh
 data Parser a = Parser (String -> ParsingResult a)
 
 instance Functor Parser where
-    fmap newF (Parser f) =  Parser (\input -> case (f input) of
+    fmap newF (Parser f) =  Parser (\input -> case f input of
                                               ParsingSuccess val rest -> ParsingSuccess (newF val) rest
                                               ParsingError err -> ParsingError err)
 
 instance Applicative Parser where
-    pure a = Parser (\input -> ParsingSuccess a input)
+    pure a = Parser (ParsingSuccess a)
     p1 <*> p2 = Parser (\input -> case runParser p1 input of
                                   ParsingError e -> ParsingError e
                                   ParsingSuccess f rest -> runParser (fmap f p2) rest)
@@ -153,11 +153,7 @@ wordParserWithSpaceNewline :: String -> Parser String
 wordParserWithSpaceNewline word = (\ _ y _ -> y) <$> spaceAndNewlineParser <*> wordParser word <*> spaceAndNewlineParser
 
 ifAndParser :: Parser String
-ifAndParser = do {
-    if_word <- wordParser "if";
-    and_word <- wordParser "and";
-    return if_word
-}
+ifAndParser = wordParser "hello" >>= (\x -> wordParser "word" >>= (\y -> return "hello"))
 
 maybeParsingResult :: ParsingResult a -> Maybe a
 maybeParsingResult (ParsingSuccess val rest) = Just val
