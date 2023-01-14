@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 module Parser.Combinator
 (
     Parser(Parser),
@@ -44,6 +45,7 @@ instance Applicative Parser where
                                   ParsingSuccess f rest -> runParser (fmap f p2) rest)
 
 instance Monad Parser where
+    (>>=) :: Parser a -> (a -> Parser b) -> Parser b
     p1 >>= f = Parser (\input -> case runParser p1 input of
                                 ParsingError e -> ParsingError e
                                 ParsingSuccess value rest -> runParser (f value) rest)

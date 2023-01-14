@@ -19,7 +19,11 @@ import Parser.Combinator
       runParser,
       oneOrMore,
       wordParserWithSpace,
-      Parser(..), zeroOrMore, ParsingResult (ParsingSuccess, ParsingError) )
+      Parser(..), zeroOrMore, ParsingResult (ParsingSuccess, ParsingError)
+      )
+    
+import Control.Monad
+
 
 import Parser.ProgramNode
 import Parser.IntegerExpressionParser
@@ -100,9 +104,34 @@ booleanExpressionParser = Parser
 typeNameParser :: Parser String
 typeNameParser = (\x y -> case y of
                     Just val -> x:val
-                    Nothing -> [x]) <$> anyOf (map charParser ['A','B'..'Z'])
-                <*> optionalParser anyLetterOrNumberParser
+                    Nothing -> [x]) 
+                    <$> anyOf (map charParser ['A','B'..'Z'])
+                    <*> optionalParser anyLetterOrNumberParser
 
+-- function hello_word (name: String, age: Int) : Int = 3;
+-- FunctionDefinition (In the register, you put the address.)
+-- if in the local stack, otherwise check the argument expressions. 
+--  
+
+{-
+
+State 's 'a  = State ('s -> ('a,'s))
+
+runState :: State a s -> s -> (a, s)
+runState (State f) = f s
+
+
+So State is a function. 
+
+    (>>=) :: Generator a -> (a -> Generator b) -> Generator b
+
+    How is it used?
+
+    generatePrintAsm >>= (\asm1 -> 
+        generateLetAsm >>= (\asm2 -> return (mergeAsms ))  
+    )
+
+-}
 
 
 expressionParser :: Parser Expression
