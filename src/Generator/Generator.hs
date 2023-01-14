@@ -51,6 +51,12 @@ So State is a function.
 
     Fmap :: (a -> b) -> State (s a) -> (State s b)
 
+    How would Applicative Work?
+
+    handleExpr <$> 
+    getLetExprAsm 
+    <*> getPrintExprAsm 
+
 
 -}
 instance Functor (State s) where
@@ -58,6 +64,14 @@ instance Functor (State s) where
     fmap f state = State (\input ->
         let (updatedVal, updatedState) = runState state input in
                                                 (f updatedVal, updatedState))
+instance Applicative (State s) where
+  pure :: a -> State s a
+  pure value = State (\input -> (value, input))
+
+  (<*>) :: State s (a -> b) -> State s a -> State s b
+  (<*>) fState state = State (\initial ->
+    let (updatedValue, updatedState) = runState state initial in
+        let (f, newState) = runState fState updatedState in (f updatedValue, newState) )
 
 instance Monad (State s) where
     return :: a -> State s a
