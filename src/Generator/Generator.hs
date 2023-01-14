@@ -19,7 +19,7 @@ doublesArrayConst = "__slash_doubles_array"
 newtype State s a = State (s -> (a,s))
 
 runState :: State s a -> s -> (a,s)
-runState (State f) = f 
+runState (State f) = f
 
 {-
 
@@ -48,15 +48,24 @@ So State is a function.
     asm1 is passed to lambda function. 
 
     Which should give me a FUNCTION to which i call run using the intiial state. Got it. 
+
+    Fmap :: (a -> b) -> State (s a) -> (State s b)
+
+
 -}
+instance Functor (State s) where
+    fmap :: (a -> b) -> State s a -> State s b
+    fmap f state = State (\input ->
+        let (updatedVal, updatedState) = runState state input in
+                                                (f updatedVal, updatedState))
 
 instance Monad (State s) where
     return :: a -> State s a
     return value = State (\s -> (value,s) )
 
     (>>=) :: State s a -> (a -> State s b) -> State s b
-    s1 >>= f = State (\initial -> let 
-        (value, stateVariable) = runState s1 initial 
+    s1 >>= f = State (\initial -> let
+        (value, stateVariable) = runState s1 initial
             in runState (f value) stateVariable)
 
 
