@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+{-# LANGUAGE InstanceSigs #-}
 module Generator.Generator where
 import Parser.ProgramNode
 import Generator.X86Assembly
@@ -9,13 +12,53 @@ import Parser.ReturnType
 import Data.Foldable
 import Data.Map
 import Data.Maybe
+import GHC.IO.Handle (NewlineMode(inputNL))
 doublesArrayConst = "__slash_doubles_array"
 
-data RegisterDivisons = RegisterDivision
-                            {one :: Register,
-                            two :: Register,
-                            four :: Register,
-                            eight :: Register}
+
+newtype State s a = State (s -> (a,s))
+
+runState :: State s a -> s -> (a,s)
+runState (State f) = f 
+
+{-
+
+State 's 'a  = State ('s -> ('a,'s))
+
+runState :: State a s -> s -> (a, s)
+runState (State f) = f s
+
+
+So State is a function. 
+
+    (>>=) :: Generator a -> (a -> Generator b) -> Generator b
+
+    How is it used?
+
+    generatePrintAsm >>= (\asm1 -> 
+        generateLetAsm >>= (\asm2 -> return (mergeAsms asm1 asm2))  
+    )
+
+
+    OKay let's thin about just this example
+
+    generatePrintAsm >>= (\asm1 -> generateLetAsm)
+
+    generatePrintAsm would give me (asm1, updatedState) 
+    asm1 is passed to lambda function. 
+
+    Which should give me a FUNCTION to which i call run using the intiial state. Got it. 
+-}
+
+instance Monad (State s) where
+    return :: a -> State s a
+    return value = State (\s -> (value,s) )
+
+    (>>=) :: State s a -> (a -> State s b) -> State s b
+    s1 >>= f = State (\initial -> let 
+        (value, stateVariable) = runState s1 initial 
+            in runState (f value) stateVariable)
+
 
 getInitialAsm :: X86Assembly
 getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", Extern "_printf",

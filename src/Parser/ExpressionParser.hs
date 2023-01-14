@@ -113,25 +113,6 @@ typeNameParser = (\x y -> case y of
 -- if in the local stack, otherwise check the argument expressions. 
 --  
 
-{-
-
-State 's 'a  = State ('s -> ('a,'s))
-
-runState :: State a s -> s -> (a, s)
-runState (State f) = f s
-
-
-So State is a function. 
-
-    (>>=) :: Generator a -> (a -> Generator b) -> Generator b
-
-    How is it used?
-
-    generatePrintAsm >>= (\asm1 -> 
-        generateLetAsm >>= (\asm2 -> return (mergeAsms ))  
-    )
-
--}
 
 
 expressionParser :: Parser Expression
