@@ -1,3 +1,1 @@
-let x: Int = 4 in 
-let y: Int = 5 in
-println("%d", x+y)
+2.3 + 3.9 + 2.1
