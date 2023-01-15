@@ -80,7 +80,7 @@ getStringAsm str destination state =
     (X86Assembly {dataSection = dataSection, codeSection = codeSection}, newState)
 
 stringExprGenerator :: String -> WordReg -> Generator
-stringExprGenerator str destination = 
+stringExprGenerator str destination =
     State (\state ->
         let newState = createNewConst state in
         let newId = getConstId newState in
@@ -123,6 +123,26 @@ getPrintExprsAsms (x:xs) remaining regular doubles count asms state pops origina
         let (newAsms, remainingExprs, remainingReg, newState, newPops) = getAsmOrAddToRemaining x regular remaining asms state pops in
             getPrintExprsAsms xs remainingExprs remainingReg doubles count newAsms newState newPops originalBytes
 
+printArgumentExpressionsGenerator :: [Expression] -> [Expression] -> [WordReg] -> [WordReg] -> Int ->
+    [X86Assembly] -> [X86Instruction] -> Integer -> State ProgramState ([X86Assembly], [Expression], Int, [X86Instruction])
+
+printArgumentExpressionsGenerator [] remaining _ _ count asms pops originalBytes =
+        State(\state -> ((reverse asms, reverse remaining, count, pops), setBytes state originalBytes))
+
+printArgumentExpressionsGenerator (x:xs) remaining regular doubles count asms pops originalBytes = 
+    State (\state -> 
+        if expressionHasDouble x state then
+        let (newAsms, remainingExprs, remainingDoubleReg, newState, newPops) =
+                        getAsmOrAddToRemaining x doubles remaining asms state pops in
+        let newCount = count + 1 in
+        runState (printArgumentExpressionsGenerator xs remainingExprs regular remainingDoubleReg newCount newAsms newPops originalBytes) newState
+
+    else
+        let (newAsms, remainingExprs, remainingReg, newState, newPops) = getAsmOrAddToRemaining x regular remaining asms state pops in
+            runState (printArgumentExpressionsGenerator xs remainingExprs remainingReg doubles count newAsms newPops originalBytes) newState
+        )
+
+
 evaluateExprStoreToStack :: Expression -> WordReg -> WordReg ->
     Int -> ProgramState -> (X86Assembly, ProgramState)
 evaluateExprStoreToStack expression regularReg doubleReg offset state =
@@ -142,15 +162,16 @@ getRemainingExprsToStackAsm expressions regularReg doubleReg state =
                 (mergeAsm asm newAsm, offset + 1, newState)) (getEmptyX86Asm, 0, state) expressions in
     (newAsm, newState)
 
+remainingExprsToStackGenerator :: [Expression] -> WordReg -> WordReg -> Generator 
+remainingExprsToStackGenerator expressions regularReg doubleReg = 
+    State (\state -> 
+        let (newAsm, _, newState) = Data.Foldable.foldl (\(asm, offset, state) expr -> 
+                let (newAsm, newState) = evaluateExprStoreToStack expr regularReg doubleReg offset state in
+                (mergeAsm asm newAsm, offset + 1, newState)) (getEmptyX86Asm, 0, state) expressions in
+    (newAsm, newState))
+
 getDivRegistersAsm :: Register -> Register -> X86Assembly
 getDivRegistersAsm left right = getX86Assembly [MOVR (WR RAX) left, MOVI (WR RDX) 0, DIV right]
-
-{-
-    variables 
-    push 
-    variables
-    push 
--}
 
 getPrintAsm :: String -> [Expression] -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getPrintAsm str expressions register state =
@@ -168,8 +189,34 @@ getPrintAsm str expressions register state =
                         getX86Assembly [SUB (WR RSP) (WR RDX), SUBI (WR RSP) 32, MOVPToMem (WR RSP) 0 (WR regularReg), MOVFloatToMem (WR RSP) 1 (WR doubleReg), MOVPToMem (WR RSP) 2 (WR RDX), SUBI (WR RSP) stackSize, MOVR (WR RDX) (WR R11)],
         remainingAsm, getX86Assembly [MOVPFromMem (WR regularReg) stackTopOffset (WR RSP), MOVFloatFromMem (WR doubleReg) (stackTopOffset+1) (WR RSP), MOVI (WR RAX) (toInteger doublesCount), CALL "_printf", ADDI (WR RSP) (stackSize + 16), POP (WR RDX), ADDI (WR RSP) 8, ADD (WR RSP) (WR RDX)]], finalState)
 
--- printExprGenerator :: String -> [Expression] -> WordReg -> Generator
--- printExprGenerator str expressions register = 
+-- 
+{-
+printArgumentExpressionsGenerator [] remaining _ _ count asms pops originalBytes =
+        State(\state -> ((reverse asms, reverse remaining, count, pops), setBytes state originalBytes))
+
+-}
+-- ([X86Assembly], [Expression], Int, [X86Instruction])
+printExprGenerator :: String -> [Expression] -> WordReg -> Generator
+printExprGenerator str expressions register = 
+    State (\state -> 
+        let originalBytes = getBytesAllocated state in 
+            let monad = 
+                    do {
+                        strAsm <- stringExprGenerator str RDI;
+                        (exprAsms, remaining, doublesCount, pops) <- 
+                        printArgumentExpressionsGenerator expressions [] [RSI, RDX, RCX, R8, R9] (Prelude.map DoubleReg [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]) 0 [] [] originalBytes;
+                        let (regularReg, doubleReg) = (R8,DoubleReg XMM0) in 
+                            (do {
+                                 remainingAsm <- remainingExprsToStackGenerator remaining regularReg doubleReg;
+                                 let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
+                                    let stackTopOffset = fromIntegral stackSize `div` 8 in
+                                        return  (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops,
+                        getX86Assembly [MOVR (WR R11) (WR RDX), MOVI (WR R10) 16], getDivRegistersAsm (WR RSP) (WR R10),
+                        getX86Assembly [SUB (WR RSP) (WR RDX), SUBI (WR RSP) 32, MOVPToMem (WR RSP) 0 (WR regularReg), MOVFloatToMem (WR RSP) 1 (WR doubleReg), MOVPToMem (WR RSP) 2 (WR RDX), SUBI (WR RSP) stackSize, MOVR (WR RDX) (WR R11)],
+        remainingAsm, getX86Assembly [MOVPFromMem (WR regularReg) stackTopOffset (WR RSP), MOVFloatFromMem (WR doubleReg) (stackTopOffset+1) (WR RSP), MOVI (WR RAX) (toInteger doublesCount), CALL "_printf", ADDI (WR RSP) (stackSize + 16), POP (WR RDX), ADDI (WR RSP) 8, ADD (WR RSP) (WR RDX)]])})
+
+                    } 
+            in runState monad state)
 
 registerIsForDoubles :: WordReg -> Bool
 registerIsForDoubles (DoubleReg _) = True
@@ -259,8 +306,8 @@ mathExprGenerator left right operator reg =
        }
 
 divExprGenerator :: Expression -> Expression -> WordReg -> Generator
-divExprGenerator left right reg = 
-    if registerIsForDoubles reg then doubleMathExprGenerator left right DivOp reg  
+divExprGenerator left right reg =
+    if registerIsForDoubles reg then doubleMathExprGenerator left right DivOp reg
     else
         let leftReg = R8 in
         let rightReg = R9 in
@@ -268,7 +315,7 @@ divExprGenerator left right reg =
             leftAsm <- expressionGenerator left leftReg;
             rightAsm <- expressionGenerator right rightReg;
             let ending = getX86Assembly [POP (WR leftReg), MOVI (WR RDX) 0, MOVR (WR RAX) (WR leftReg),
-                                DIV (WR rightReg), MOVR (WR reg) (WR RAX)] in 
+                                DIV (WR rightReg), MOVR (WR reg) (WR RAX)] in
             return (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH (WR leftReg)], rightAsm, ending])
         }
 
@@ -375,8 +422,8 @@ getVariableExprAsm name reg state =
             -- (getX86Assembly [instr correctReg offset], state)
         Nothing -> (getEmptyX86Asm, state)
 
-variableExprGenerator :: String -> WordReg -> Generator 
-variableExprGenerator name reg = State (\state -> 
+variableExprGenerator :: String -> WordReg -> Generator
+variableExprGenerator name reg = State (\state ->
     case findVariable state name of
         Just VariableInfo {offset = offset, exprType = exprType} ->
                 if registerIsForDoubles reg
@@ -475,11 +522,11 @@ getDoubleExprAsm value reg state =
 
 
 doubleExprGenerator :: Double -> WordReg -> Generator
-doubleExprGenerator value reg = State (\state -> 
+doubleExprGenerator value reg = State (\state ->
         let newState = addDouble state value in
         let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
         (asm, newState))
-    
+
 
 generateAsmForExpression :: Expression -> ProgramState -> WordReg -> (X86Assembly, ProgramState)
 generateAsmForExpression expression state register =
@@ -510,8 +557,7 @@ expressionGenerator expression register  =
         BooleanOpExpr booleanExpr -> booleanExprGenerator booleanExpr register
         StringExpr value -> stringExprGenerator value register
         VariableExpr name -> variableExprGenerator name register
-
-
+        PrintExpr {toPrint = value, expressions = exprs} -> printExprGenerator value exprs register
 
 
 getStackAllocationAsm :: Integer -> X86Assembly

@@ -1,1 +1,1 @@
-2.3 + 3.9 + 2.1
+println("%s %s %s %s %s %s %f %d", "hello world", "goodbye", "hitchhiker", "douglas adams", "now", "testing", 2.0, 4)

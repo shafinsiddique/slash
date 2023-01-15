@@ -214,7 +214,7 @@ instance Show X86Instruction where
     show (PUSHBytes bytes fromReg) = printf "%s\nmov [rsp], %s" (show (SUBI (WR RSP) bytes)) (show fromReg)
     show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI (WR RSP) bytes))
     show (XOR reg1 reg2) = printf "xor %s, %s" (show reg1) (show reg2)
-    show (DEBUG val) = val
+    show (DEBUG val) = printf "; DEBUG =  %s" val
     
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
