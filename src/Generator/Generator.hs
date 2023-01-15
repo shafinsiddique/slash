@@ -21,44 +21,6 @@ newtype State s a = State (s -> (a,s))
 runState :: State s a -> s -> (a,s)
 runState (State f) = f
 
-{-
-
-State 's 'a  = State ('s -> ('a,'s))
-
-runState :: State a s -> s -> (a, s)
-runState (State f) = f s
-
-
-So State is a function. 
-
-    (>>=) :: Generator a -> (a -> Generator b) -> Generator b
-
-    How is it used?
-
-    generatePrintAsm >>= (\asm1 -> 
-        generateLetAsm >>= (\asm2 -> return (mergeAsms asm1 asm2))  
-    )
-
-
-    OKay let's thin about just this example
-
-    generatePrintAsm >>= (\asm1 -> generateLetAsm)
-
-    generatePrintAsm would give me (asm1, updatedState) 
-    asm1 is passed to lambda function. 
-
-    Which should give me a FUNCTION to which i call run using the intiial state. Got it. 
-
-    Fmap :: (a -> b) -> State (s a) -> (State s b)
-
-    How would Applicative Work?
-
-    handleExpr <$> 
-    getLetExprAsm 
-    <*> getPrintExprAsm 
-
-
--}
 instance Functor (State s) where
     fmap :: (a -> b) -> State s a -> State s b
     fmap f state = State (\input ->
@@ -82,6 +44,13 @@ instance Monad (State s) where
         (value, stateVariable) = runState s1 initial
             in runState (f value) stateVariable)
 
+
+type Generator = State ProgramState X86Assembly
+
+runGenerator :: State s a -> s -> (a, s)
+runGenerator = runState
+
+data MathOperation = AddOp | SubOp | MulOp | DivOp
 
 getInitialAsm :: X86Assembly
 getInitialAsm = let codeSection = [TextSection, Global "_main", Default "rel", Extern "_printf",
@@ -201,7 +170,11 @@ getIntExprAsm value reg state =
     if registerIsForDoubles reg then getDoubleExprAsm (fromIntegral value) reg state else
     (getX86Assembly [MOVI (WR reg) value], state)
 
+intExprGenerator :: Integer -> WordReg -> Generator
+intExprGenerator value reg =
+    State (\state -> if registerIsForDoubles reg then getDoubleExprAsm (fromIntegral value) reg state else
 
+                (getX86Assembly [MOVI (WR reg) value], state))
 
 getMathExprDoubleAsm :: Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getMathExprDoubleAsm expr reg state =
@@ -217,6 +190,22 @@ getMathExprDoubleAsm expr reg state =
             let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
             (mergeMultipleAsm [leftAsm, getX86Assembly
                         [SUBI (WR RSP) 8, MOVFloatToMem (WR RSP) 0 (WR leftReg)], rightAsm, getX86Assembly [MOVFloatFromMem (WR leftReg) 0 (WR RSP), ADDI (WR RSP) 8, instr (WR leftReg) (WR rightReg), MOVSD (WR reg) (WR leftReg)]], rightState)
+
+doubleMathExprGenerator :: Expression -> Expression -> MathOperation -> WordReg -> Generator
+doubleMathExprGenerator left right operator reg =
+    let instr = (case operator of
+             AddOp -> ADDSD
+             SubOp -> SUBSD
+             MulOp -> MULSD
+             DivOp -> DIVSD) in
+    let leftReg = DoubleReg XMM0 in
+    let rightReg = DoubleReg XMM1 in
+    do {
+        leftAsm <- expressionGenerator left leftReg;
+        rightAsm <- expressionGenerator right rightReg;
+        return (mergeMultipleAsm [leftAsm, getX86Assembly
+                        [SUBI (WR RSP) 8, MOVFloatToMem (WR RSP) 0 (WR leftReg)], rightAsm, getX86Assembly [MOVFloatFromMem (WR leftReg) 0 (WR RSP), ADDI (WR RSP) 8, instr (WR leftReg) (WR rightReg), MOVSD (WR reg) (WR leftReg)]])
+    }
 
 getMathExprAsm2 :: Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getMathExprAsm2 expr reg state =
@@ -236,6 +225,39 @@ getMathExprAsm2 expr reg state =
                 [leftAsm, getX86Assembly [PUSH  leftGen], rightAsm,
                 getX86Assembly [POP leftGen, instr leftGen rightGen,
                             MOVR (WR reg) leftGen]], rightState))
+
+mathExprGenerator :: Expression -> Expression -> MathOperation -> WordReg -> Generator
+mathExprGenerator left right operator reg =
+    if registerIsForDoubles reg then doubleMathExprGenerator left right operator reg else
+       let instr = (case operator of
+             AddOp -> ADD
+             SubOp -> SUB
+             MulOp -> IMUL) in
+       let leftReg =  R8 in
+       let rightReg = R9 in
+       let (leftGen, rightGen) = (WR leftReg, WR rightReg) in
+       do {
+           leftAsm <- expressionGenerator left leftReg;
+           rightAsm <- expressionGenerator right rightReg;
+           return (mergeMultipleAsm
+               [leftAsm, getX86Assembly [PUSH  leftGen], rightAsm,
+               getX86Assembly [POP leftGen, instr leftGen rightGen,
+                           MOVR (WR reg) leftGen]])
+       }
+
+divExprGenerator :: Expression -> Expression -> WordReg -> Generator
+divExprGenerator left right reg = 
+    if registerIsForDoubles reg then doubleMathExprGenerator left right DivOp reg  
+    else
+        let leftReg = R8 in
+        let rightReg = R9 in
+        do {
+            leftAsm <- expressionGenerator left leftReg;
+            rightAsm <- expressionGenerator right rightReg;
+            let ending = getX86Assembly [POP (WR leftReg), MOVI (WR RDX) 0, MOVR (WR RAX) (WR leftReg),
+                                DIV (WR rightReg), MOVR (WR reg) (WR RAX)] in 
+            return (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH (WR leftReg)], rightAsm, ending])
+        }
 
 getDivExprAsm :: Expression -> Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
 getDivExprAsm left right reg state =
@@ -426,6 +448,14 @@ getDoubleExprAsm value reg state =
     let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
     (asm, newState)
 
+
+doubleExprGenerator :: Double -> WordReg -> Generator
+doubleExprGenerator value reg = State (\state -> 
+        let newState = addDouble state value in
+        let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
+        (asm, newState))
+    
+
 generateAsmForExpression :: Expression -> ProgramState -> WordReg -> (X86Assembly, ProgramState)
 generateAsmForExpression expression state register =
     let (newAsm, newState) =
@@ -443,6 +473,18 @@ generateAsmForExpression expression state register =
                 IfExpr cond thenExp elseExp -> getIfExprAsm cond thenExp elseExp register state
                 DoubleExpr value -> getDoubleExprAsm value register state) in
     (newAsm, newState)
+
+expressionGenerator :: Expression -> WordReg -> Generator
+expressionGenerator expression register  =
+    case expression of
+        IntExpr value -> intExprGenerator value register
+        Addition left right -> mathExprGenerator left right AddOp register
+        Subtraction left right -> mathExprGenerator left right SubOp register
+        Division left right -> divExprGenerator left right register
+        DoubleExpr value -> doubleExprGenerator value register
+
+
+
 
 getStackAllocationAsm :: Integer -> X86Assembly
 getStackAllocationAsm val = addCodeSection getEmptyX86Asm [SUBI (WR RSP) val]
@@ -505,13 +547,12 @@ getOutputRegister expr state = if expressionHasDouble expr state then DoubleReg 
 generateAsmForExpressions :: [Expression] -> (X86Assembly, ProgramState) -> (X86Assembly, ProgramState)
 generateAsmForExpressions [] (asm, state) = (asm, state)
 generateAsmForExpressions (x:xs) (asm, state) =
-    let (newAsm, newState) =  generateAsmForExpression x state (getOutputRegister x state) in
+    let (newAsm, newState) =  runGenerator (expressionGenerator x (getOutputRegister x state)) state in
         generateAsmForExpressions xs (mergeAsm asm newAsm, newState)
 
 generateX86 :: [Expression] -> X86Assembly
 generateX86 expressions =
     let oldAsm = getInitialAsm in
-    let symbolTable = getNewSymbolTable in
     let state = getInitialState in
     let (newAsm, finalState) = generateAsmForExpressions expressions (getEmptyX86Asm, state) in
     let asmWithDoubles = addDataSection newAsm
