@@ -173,22 +173,6 @@ remainingExprsToStackGenerator expressions regularReg doubleReg =
 getDivRegistersAsm :: Register -> Register -> X86Assembly
 getDivRegistersAsm left right = getX86Assembly [MOVR (WR RAX) left, MOVI (WR RDX) 0, DIV right]
 
-getPrintAsm :: String -> [Expression] -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getPrintAsm str expressions register state =
-    let (strAsm, newState) = getStringAsm str RDI state in
-        let originalBytes = getBytesAllocated state in
-        let (exprAsms, remaining, doublesCount, secondState, pops) = getPrintExprsAsms expressions []  [RSI, RDX, RCX, R8, R9] (Prelude.map DoubleReg [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]) 0 [] newState [] originalBytes in
-        let regularReg = R8 in
-        let doubleReg = DoubleReg XMM0 in
-        let (remainingAsm, finalState) =
-                        getRemainingExprsToStackAsm remaining regularReg doubleReg secondState in
-        let stackSize = toInteger ((((length remaining * 8) `div` 16) + 1) * 16) in
-        let stackTopOffset = fromIntegral stackSize `div` 8 in
-           (mergeMultipleAsm [strAsm, addCodeSection (mergeMultipleAsm exprAsms) pops,
-                        getX86Assembly [MOVR (WR R11) (WR RDX), MOVI (WR R10) 16], getDivRegistersAsm (WR RSP) (WR R10),
-                        getX86Assembly [SUB (WR RSP) (WR RDX), SUBI (WR RSP) 32, MOVPToMem (WR RSP) 0 (WR regularReg), MOVFloatToMem (WR RSP) 1 (WR doubleReg), MOVPToMem (WR RSP) 2 (WR RDX), SUBI (WR RSP) stackSize, MOVR (WR RDX) (WR R11)],
-        remainingAsm, getX86Assembly [MOVPFromMem (WR regularReg) stackTopOffset (WR RSP), MOVFloatFromMem (WR doubleReg) (stackTopOffset+1) (WR RSP), MOVI (WR RAX) (toInteger doublesCount), CALL "_printf", ADDI (WR RSP) (stackSize + 16), POP (WR RDX), ADDI (WR RSP) 8, ADD (WR RSP) (WR RDX)]], finalState)
-
 -- 
 {-
 printArgumentExpressionsGenerator [] remaining _ _ count asms pops originalBytes =
@@ -224,30 +208,10 @@ registerIsForDoubles _ = False
 createAndAddSymbol :: ProgramState -> String -> ExpressionType -> ProgramState
 createAndAddSymbol = addSymbol
 
-getIntExprAsm :: Integer -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getIntExprAsm value reg state =
-    if registerIsForDoubles reg then getDoubleExprAsm (fromIntegral value) reg state else
-    (getX86Assembly [MOVI (WR reg) value], state)
-
 intExprGenerator :: Integer -> WordReg -> Generator
 intExprGenerator value reg =
     if registerIsForDoubles reg then doubleExprGenerator (fromIntegral value) reg else
     State (\state -> (getX86Assembly [MOVI (WR reg) value], state))
-
-getMathExprDoubleAsm :: Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getMathExprDoubleAsm expr reg state =
-    let (left, right, instr) =
-            case expr of
-                Addition left right -> (left, right, ADDSD)
-                Subtraction left right -> (left, right, SUBSD)
-                Multiplication left right -> (left, right, MULSD)
-                Division left right -> (left, right, DIVSD) in
-            let leftReg = DoubleReg XMM0 in
-            let rightReg = DoubleReg XMM1 in
-            let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
-            let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-            (mergeMultipleAsm [leftAsm, getX86Assembly
-                        [SUBI (WR RSP) 8, MOVFloatToMem (WR RSP) 0 (WR leftReg)], rightAsm, getX86Assembly [MOVFloatFromMem (WR leftReg) 0 (WR RSP), ADDI (WR RSP) 8, instr (WR leftReg) (WR rightReg), MOVSD (WR reg) (WR leftReg)]], rightState)
 
 doubleMathExprGenerator :: Expression -> Expression -> MathOperation -> WordReg -> Generator
 doubleMathExprGenerator left right operator reg =
@@ -264,25 +228,6 @@ doubleMathExprGenerator left right operator reg =
         return (mergeMultipleAsm [leftAsm, getX86Assembly
                         [SUBI (WR RSP) 8, MOVFloatToMem (WR RSP) 0 (WR leftReg)], rightAsm, getX86Assembly [MOVFloatFromMem (WR leftReg) 0 (WR RSP), ADDI (WR RSP) 8, instr (WR leftReg) (WR rightReg), MOVSD (WR reg) (WR leftReg)]])
     }
-
-getMathExprAsm2 :: Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getMathExprAsm2 expr reg state =
-    if registerIsForDoubles reg then getMathExprDoubleAsm expr reg state
-    else
-        (let (left, right, instr) =
-                case expr of
-                    Addition left right -> (left, right, ADD )
-                    Subtraction left right -> (left, right, SUB  )
-                    Multiplication left right -> (left, right, IMUL) in
-        let leftReg =  R8 in
-        let rightReg = R9 in
-        let (leftGen, rightGen) = (WR leftReg, WR rightReg) in
-        let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
-        let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-        (mergeMultipleAsm
-                [leftAsm, getX86Assembly [PUSH  leftGen], rightAsm,
-                getX86Assembly [POP leftGen, instr leftGen rightGen,
-                            MOVR (WR reg) leftGen]], rightState))
 
 mathExprGenerator :: Expression -> Expression -> MathOperation -> WordReg -> Generator
 mathExprGenerator left right operator reg =
@@ -316,18 +261,6 @@ divExprGenerator left right reg =
                                 DIV (WR rightReg), MOVR (WR reg) (WR RAX)] in
             return (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH (WR leftReg)], rightAsm, ending])
         }
-
-getDivExprAsm :: Expression -> Expression -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getDivExprAsm left right reg state =
-    if registerIsForDoubles reg then getMathExprDoubleAsm (Division left right) reg state
-    else
-        let leftReg = R8 in
-        let rightReg = R9 in
-        let (leftAsm, leftState) = generateAsmForExpression left state leftReg in
-        let (rightAsm, rightState) = generateAsmForExpression right leftState rightReg in
-        let ending = getX86Assembly [POP (WR leftReg), MOVI (WR RDX) 0, MOVR (WR RAX) (WR leftReg),
-                DIV (WR rightReg), MOVR (WR reg) (WR RAX)] in
-        (mergeMultipleAsm [leftAsm, getX86Assembly [PUSH (WR leftReg)], rightAsm, ending], rightState)
 
 {-
 Expr size can not be bigger than max register size. If it is, the pointer should be stored. 
@@ -407,18 +340,6 @@ getCorrectReg reg size
     | size <= 4 = getCorrespondingFourByte reg
     | otherwise = WR reg
 
-getVariableExprAsm :: String -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getVariableExprAsm name reg state =
-    case findVariable state name of
-        Just VariableInfo {offset = offset, exprType = exprType} ->
-                if registerIsForDoubles reg
-                    then (getX86Assembly [MOVDoubleFromStack (WR reg) offset], state)
-                else
-                    let correctReg = getCorrectReg reg (getExprSize exprType) in
-                        (getX86Assembly [XOR (WR reg) (WR reg), MOVFromStack correctReg offset], state)
-
-            -- (getX86Assembly [instr correctReg offset], state)
-        Nothing -> (getEmptyX86Asm, state)
 
 variableExprGenerator :: String -> WordReg -> Generator
 variableExprGenerator name reg = State (\state ->
@@ -442,19 +363,6 @@ createNewSymbol name exprType = State (\state -> (getNewSymbolOffset state exprT
 toStateMonad :: (a -> ProgramState -> b) -> a -> State ProgramState b
 toStateMonad f arg = State (\state -> (f arg state, state))
 
-getLetExprAsm :: String -> Expression -> Expression -> WordReg -> ProgramState ->
-                                                                    (X86Assembly, ProgramState)
-getLetExprAsm name value expr reg state =
-    let exprType = getExprType value state in
-    let scratchRegister = getOutputRegister value state in
-    let (valAsm, valState) = generateAsmForExpression value state scratchRegister in
-    let symbolOffset = getNewSymbolOffset valState exprType in
-    let stateWithNewSymbol = addSymbol valState name exprType in
-    let movInstr = if registerIsForDoubles scratchRegister then MOVDoubleToStack else MOVToStack in
-    let addToStackAsm = addCodeSection valAsm
-                [SUBI (WR RSP) (getExprSize exprType), movInstr symbolOffset (WR scratchRegister)] in
-    let (exprAsm, finalState) = generateAsmForExpression expr stateWithNewSymbol reg in
-    (mergeAsm addToStackAsm exprAsm, finalState)
 
 letExprGenerator :: String -> Expression -> Expression -> WordReg -> Generator
 letExprGenerator name value expr reg =
@@ -490,46 +398,15 @@ getEqualityCode expr leftReg rightReg dest = case expr of
 println("%b", let x = True in x -- (rdi))
 
 -}
-getTrueFalseExprAsm :: Bool -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getTrueFalseExprAsm val reg state = let intRepresentation = if val then 1 else 0 in
-    (getX86Assembly [MOVI (WR reg) intRepresentation], state)
 
 trueFalseExprGenerator :: Bool -> WordReg -> Generator
 trueFalseExprGenerator val reg = let intRepresentation = if val then 1 else 0 in
     State (\state -> (getX86Assembly [MOVI (WR reg) intRepresentation], state))
 
-getBooleanExprAsm :: BooleanOp -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getBooleanExprAsm expr reg state =
-    case expr of
-        TrueFalseExpr val -> getTrueFalseExprAsm val reg state
-
 booleanExprGenerator :: BooleanOp -> WordReg -> Generator
 booleanExprGenerator expr reg = case expr of
     TrueFalseExpr val -> trueFalseExprGenerator val reg
 
-getIfExprAsm :: BooleanOp -> Expression -> Expression -> WordReg -> ProgramState ->
-                                                                    (X86Assembly , ProgramState)
-
-getIfExprAsm cond thenExp elseExp reg state =
-    let scratchReg = R10 in
-    let (condAsm, condState) = getBooleanExprAsm cond scratchReg state  in
-    let newIf = createNewIf condState in
-    let ifId = getIfCounter newIf in
-    let ifBranchLabel = printf "if_branch_%d" ifId in
-    let elseBranchlabel = printf "else_branch_%d" ifId in
-    let continueBranchLabel = printf "continue_%d" ifId in
-    let mainSectionAsm = addCodeSection condAsm [CMPRI (WR scratchReg) 1,
-                                                           JZ ifBranchLabel, JMP elseBranchlabel] in
-    let (ifBranchAsm, ifBranchState) = generateAsmForExpression thenExp newIf reg in
-    let (elseBranchAsm, finalState) = generateAsmForExpression elseExp ifBranchState reg in
-
-    let finalIf = mergeMultipleAsm [getX86Assembly [Section ifBranchLabel], ifBranchAsm,
-                                                   getX86Assembly [JMP continueBranchLabel]] in
-
-    let finalElse = mergeMultipleAsm [getX86Assembly [Section elseBranchlabel],
-                                           elseBranchAsm, getX86Assembly [JMP continueBranchLabel]] in
-
-    (mergeMultipleAsm [mainSectionAsm, finalIf, finalElse, getX86Assembly [Section continueBranchLabel]], finalState )
 
 addIfToState :: State ProgramState Integer
 addIfToState = State (\state -> (getIfCounter state + 1, createNewIf state))
@@ -558,37 +435,12 @@ ifExprGenerator cond thenExp elseExp reg  =
             return (mergeMultipleAsm [mainSectionAsm, finalIf, finalElse, getX86Assembly [Section continueBranchLabel]])}
         }
 
-getDoubleExprAsm :: Double -> WordReg -> ProgramState -> (X86Assembly, ProgramState)
-getDoubleExprAsm value reg state =
-    let newState = addDouble state value in
-    let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
-    (asm, newState)
-
-
 doubleExprGenerator :: Double -> WordReg -> Generator
 doubleExprGenerator value reg = State (\state ->
         let newState = addDouble state value in
         let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
         (asm, newState))
 
-
-generateAsmForExpression :: Expression -> ProgramState -> WordReg -> (X86Assembly, ProgramState)
-generateAsmForExpression expression state register =
-    let (newAsm, newState) =
-            (case expression of
-                PrintExpr {toPrint = value, expressions = exprs} -> getPrintAsm value exprs register state
-                IntExpr value -> getIntExprAsm value register state
-                Addition _ _ -> getMathExprAsm2 expression register state
-                Subtraction _ _ -> getMathExprAsm2 expression register state
-                Multiplication _ _ -> getMathExprAsm2 expression register state
-                Division left right -> getDivExprAsm left right register state
-                StringExpr value ->  getStringAsm value register state
-                LetExpr name typeName value expr -> getLetExprAsm name value expr register state
-                VariableExpr name -> getVariableExprAsm name register state
-                BooleanOpExpr booleanExpr -> getBooleanExprAsm booleanExpr register state
-                IfExpr cond thenExp elseExp -> getIfExprAsm cond thenExp elseExp register state
-                DoubleExpr value -> getDoubleExprAsm value register state) in
-    (newAsm, newState)
 
 expressionGenerator :: Expression -> WordReg -> Generator
 expressionGenerator expression register  =
