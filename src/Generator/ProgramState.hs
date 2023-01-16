@@ -38,6 +38,7 @@ addSymbol (ProgramState table num ifCounter doubles bytes) name exprType =
     let totalBytesAllocated = bytes + getExprSize exprType in
         ProgramState (addSymbolToTable table name (VariableInfo totalBytesAllocated exprType)) num ifCounter doubles totalBytesAllocated
 
+
 addDoubleValue :: DoublesSection -> Double -> DoublesSection
 addDoubleValue DoublesSection {values = values , valuesMap = valuesMap} value =
     if Data.Map.member value valuesMap
