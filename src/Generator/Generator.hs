@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
-{-# LANGUAGE InstanceSigs #-}
 module Generator.Generator where
 import Parser.ProgramNode
 import Generator.X86Assembly
@@ -22,24 +19,19 @@ runState :: State s a -> s -> (a,s)
 runState (State f) = f
 
 instance Functor (State s) where
-    fmap :: (a -> b) -> State s a -> State s b
     fmap f state = State (\input ->
         let (updatedVal, updatedState) = runState state input in
                                                 (f updatedVal, updatedState))
 instance Applicative (State s) where
-  pure :: a -> State s a
   pure value = State (\input -> (value, input))
 
-  (<*>) :: State s (a -> b) -> State s a -> State s b
   (<*>) fState state = State (\initial ->
     let (updatedValue, updatedState) = runState state initial in
         let (f, newState) = runState fState updatedState in (f updatedValue, newState) )
 
 instance Monad (State s) where
-    return :: a -> State s a
     return value = State (\s -> (value,s) )
 
-    (>>=) :: State s a -> (a -> State s b) -> State s b
     s1 >>= f = State (\initial -> let
         (value, stateVariable) = runState s1 initial
             in runState (f value) stateVariable)
