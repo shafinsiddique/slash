@@ -1,6 +1,6 @@
 module Parser.IntegerExpressionParser
 (
-    integerExpressionParser, positiveIntegerParser
+    integerExpressionParser, positiveIntegerParser, integerParser
 ) where
 
 import Parser.ProgramNode (Expression(IntExpr, MathExpr), MathExpression (IntExp))
@@ -27,7 +27,7 @@ integerParser :: Parser Integer
 integerParser = anyOf [negativeIntegerParser, positiveIntegerParser]
 
 integerExpressionParser :: Parser Expression
-integerExpressionParser = (\x -> MathExpr (IntExp x)) <$> integerParser
+integerExpressionParser = MathExpr . IntExp <$> integerParser
 
 
 

@@ -10,6 +10,7 @@ import Data.Foldable
 import Data.Map
 import Data.Maybe
 import GHC.IO.Handle (NewlineMode(inputNL))
+import Control.Arrow (ArrowChoice(right))
 doublesArrayConst = "__slash_doubles_array"
 
 
@@ -456,6 +457,15 @@ doubleExprGenerator value reg = State (\state ->
         let asm = getX86Assembly [MOVUPS (WR reg) doublesArrayConst (findDouble newState value)] in
         (asm, newState))
 
+mathExprGenerator2 :: MathExpression -> WordReg -> Generator 
+mathExprGenerator2 mathExpr register = case mathExpr of 
+    Add left right -> mathExprGenerator left right AddOp register
+    Sub left right -> mathExprGenerator left right SubOp register
+    Mul left right -> mathExprGenerator left right MulOp register
+    Div left right -> divExprGenerator left right register
+    DoubleExp value -> doubleExprGenerator value register
+    IntExp value -> intExprGenerator value register 
+    VariableExp name -> variableExprGenerator name register
 
 expressionGenerator :: Expression -> WordReg -> Generator
 expressionGenerator expression register  =
@@ -472,6 +482,7 @@ expressionGenerator expression register  =
         PrintExpr {toPrint = value, expressions = exprs} -> printExprGenerator value exprs register
         LetExpr name typeName value expr -> letExprGenerator name value expr register
         IfExpr cond thenExp elseExp -> ifExprGenerator cond thenExp elseExp register
+        MathExpr mathExp -> mathExprGenerator2 mathExp register
 
 getStackAllocationAsm :: Integer -> X86Assembly
 getStackAllocationAsm val = addCodeSection getEmptyX86Asm [SUBI (WR RSP) val]
@@ -486,6 +497,24 @@ getStackSize state = let tableSize = getSymbolTableSize state in
 addStackAsm :: X86Assembly -> ProgramState -> X86Assembly
 addStackAsm asm state = let stackSize = getStackSize state in
     mergeAsm (mergeAsm (getStackAllocationAsm stackSize) asm) (getStackCleanupAsm stackSize)
+
+_mathExpressionHasDouble :: MathExpression -> ProgramState -> Bool 
+_mathExpressionHasDouble (DoubleExp _) _ = True
+_mathExpressionHasDouble (Add left right) table =
+                            _expressionHasDouble left table || _expressionHasDouble right table
+_mathExpressionHasDouble (Sub left right) table =
+                            _expressionHasDouble left table || _expressionHasDouble right table
+_mathExpressionHasDouble (Div left right) table =
+                            _expressionHasDouble left table || _expressionHasDouble right table
+_mathExpressionHasDouble (Mul left right) table =
+                            _expressionHasDouble left table || _expressionHasDouble right table
+_mathExpressionHasDouble (VariableExp name) state =
+    case findVariable state name of
+        Just VariableInfo {exprType = exprType} -> case exprType of
+            DoubleType -> True
+            _ -> False
+        Nothing -> False
+_mathExpressionHasDouble (IntExp _) _ = False
 
 _expressionHasDouble :: Expression -> ProgramState -> Bool
 _expressionHasDouble (DoubleExpr _) _ = True
@@ -503,6 +532,8 @@ _expressionHasDouble (VariableExpr name) state =
             DoubleType -> True
             _ -> False
         Nothing -> False
+    
+_expressionHasDouble (MathExpr mathExpr) state = _mathExpressionHasDouble mathExpr state
 
 _expressionHasDouble (LetExpr name _ value result) state =
     let newState = createAndAddSymbol state name (getExprType value state) in
