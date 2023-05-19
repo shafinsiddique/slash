@@ -1,5 +1,5 @@
 module Parser.MathExpressionParser (mathExpressionParser) where
-import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division))
+import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division, MathExpr), MathExpression(..))
 import Parser.Combinator
 import Parser.IntegerExpressionParser
 import Parser.FloatExpressionParser
@@ -13,16 +13,16 @@ parenthesisExpressionParser = pure (\_ -> (\y -> (\_ -> y))) <*> charParser '(' 
 
 expressionStartParser :: Parser Expression
 expressionStartParser = (\_ -> (\y -> (\_ -> y))) <$> spaceParser
-                        <*> anyOf [parenthesisExpressionParser, floatExpressionParser,                 
+                        <*> anyOf [parenthesisExpressionParser, floatExpressionParser,
                                         integerExpressionParser, variableExpressionParser]
                         <*> spaceParser
 
 
-getConstructorFromSign :: Char -> (Expression -> Expression -> Expression)
-getConstructorFromSign '-' = Subtraction
-getConstructorFromSign '/' = Division
-getConstructorFromSign '+' = Addition
-getConstructorFromSign '*' = Multiplication
+getConstructorFromSign :: Char -> (Expression -> Expression -> MathExpression)
+getConstructorFromSign '-' = Sub
+getConstructorFromSign '/' = Div
+getConstructorFromSign '+' = Add
+getConstructorFromSign '*' = Mul
 
 
 getCharParsers :: [Char] -> [Parser Char]
@@ -32,7 +32,8 @@ allSignsParser :: Parser Char
 allSignsParser = anyOf (map charParser ['+','-','*', '/'])
 
 handleBinaryExpression :: Expression -> Char -> Expression -> Expression
-handleBinaryExpression left sign = getConstructorFromSign sign left
+handleBinaryExpression left sign right = let mathExpr = getConstructorFromSign sign left right in
+        MathExpr mathExpr
 
 binaryExpressionParser :: Char -> Parser Expression
 binaryExpressionParser sign = handleBinaryExpression <$> expressionStartParser
@@ -59,17 +60,17 @@ higherPrecedenceRight sign left = handleBinaryExpression left
                         <$> anyOf (map charParser (getHigherPrecedenceSigns sign))
                         <*> expressionStartParser
 
-higherPrecedenceRecursive :: Char -> Expression -> Parser Expression 
-higherPrecedenceRecursive sign left = Parser 
+higherPrecedenceRecursive :: Char -> Expression -> Parser Expression
+higherPrecedenceRecursive sign left = Parser
                                         (\input -> case runParser (higherPrecedenceRight sign left) input of
-                                                ParsingSuccess expr rest -> runParser            
+                                                ParsingSuccess expr rest -> runParser
                                                         (higherPrecedenceRecursive sign expr) rest
                                                 ParsingError e -> ParsingSuccess left input)
 
 higherPrecedenceParser2 :: Char -> Parser Expression
-higherPrecedenceParser2 sign = Parser 
-                                (\input -> case runParser (_higherPrecedence sign) input of 
-                                        ParsingSuccess left rest -> 
+higherPrecedenceParser2 sign = Parser
+                                (\input -> case runParser (_higherPrecedence sign) input of
+                                        ParsingSuccess left rest ->
                                                 runParser (higherPrecedenceRecursive sign left) rest
                                         e -> e)
 
@@ -88,7 +89,7 @@ anyRightRecursion left = Parser (\input ->
 
 
 handleRightRecursionStepOne :: Expression -> Char -> Expression -> Expression
-handleRightRecursionStepOne left sign = getConstructorFromSign sign left
+handleRightRecursionStepOne left sign right = MathExpr (getConstructorFromSign sign left right)
 
 rightRecursiveStepOneParser :: Char -> Expression -> Parser Expression
 rightRecursiveStepOneParser sign left = handleRightRecursionStepOne left <$> charParser sign

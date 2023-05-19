@@ -13,7 +13,7 @@ import GHC.IO.Handle (NewlineMode(inputNL))
 doublesArrayConst = "__slash_doubles_array"
 
 
-newtype State s a = State (s -> (a,s))
+newtype State s a =  State (s -> (a,s))
 
 runState :: State s a -> s -> (a,s)
 runState (State f) = f
@@ -36,7 +36,29 @@ instance Monad (State s) where
         (value, stateVariable) = runState s1 initial
             in runState (f value) stateVariable)
 
+-- How is the state passed?
+{--
 
+>>= returns a generator that takes in a state. 
+
+runState is called once with the initial state. 
+
+type Generator = State ProgramState X86Assembly
+
+The initial state is passed to the first generator. Which is just a function that takes in a state value and returns a new state and asm. 
+
+that state value is passed through to the next state. 
+
+The next state is wrappeed in a function f that takea in the old asm, so we can do some processing with the old asm value. 
+
+-- intExpressionGenerator >>= (\asm -> stringExpressionGenerator >>= (\asm2 -> return asm1 ++ asm2))
+
+do {
+    intAsm <- intExpressionGenerator
+    stringAsm <- stringExpressionGenerator
+    return intAsm ++ stringAsm 
+}
+--}
 type Generator = State ProgramState X86Assembly
 
 runGenerator :: State s a -> s -> (a, s)
@@ -214,6 +236,7 @@ doubleMathExprGenerator left right operator reg =
              DivOp -> DIVSD) in
     let leftReg = DoubleReg XMM0 in
     let rightReg = DoubleReg XMM1 in
+        -- expressionGenerator left leftReg >>= (\)
     do {
         leftAsm <- expressionGenerator left leftReg;
         rightAsm <- expressionGenerator right rightReg;
@@ -527,6 +550,7 @@ generateX86 expressions =
 
 Next Steps :
 
+    - Math Expression Single Type 
     - Function definitions
     - Custom Types
     - Lists

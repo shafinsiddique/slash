@@ -3,7 +3,7 @@ module Parser.IntegerExpressionParser
     integerExpressionParser, positiveIntegerParser
 ) where
 
-import Parser.ProgramNode (Expression(IntExpr))
+import Parser.ProgramNode (Expression(IntExpr, MathExpr), MathExpression (IntExp))
 import Parser.Combinator
 
 listToInteger :: [Integer] -> Integer
@@ -27,7 +27,7 @@ integerParser :: Parser Integer
 integerParser = anyOf [negativeIntegerParser, positiveIntegerParser]
 
 integerExpressionParser :: Parser Expression
-integerExpressionParser = convertParser integerParser IntExpr
+integerExpressionParser = (\x -> MathExpr (IntExp x)) <$> integerParser
 
 
 

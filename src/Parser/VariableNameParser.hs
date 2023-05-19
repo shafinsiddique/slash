@@ -1,6 +1,6 @@
 module Parser.VariableNameParser (variableNameParser,variableExpressionParser, anyLetterOrNumberParser) where
 import Parser.Combinator
-import Parser.ProgramNode ( Expression(VariableExpr) )
+import Parser.ProgramNode ( Expression(VariableExpr, MathExpr), MathExpression(..) )
 
 anyLetterOrNumberParser :: Parser String
 anyLetterOrNumberParser = oneOrMore 
@@ -14,5 +14,5 @@ variableNameParser = (\ _ y _ -> y) <$> spaceParser
 
 variableExpressionParser :: Parser Expression
 variableExpressionParser = Parser (\input -> case runParser variableNameParser input of
-                                    ParsingSuccess name rest -> ParsingSuccess (VariableExpr name) rest
+                                    ParsingSuccess name rest -> ParsingSuccess (MathExpr (VariableExp name)) rest
                                     ParsingError e -> ParsingError e)
