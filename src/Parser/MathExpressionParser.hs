@@ -1,5 +1,5 @@
 module Parser.MathExpressionParser (mathExpressionParser) where
-import Parser.ProgramNode(Expression(Addition, Subtraction, Multiplication, Division, MathExpr), MathExpression(..))
+import Parser.ProgramNode(Expression(MathExpr), MathExpression(..))
 import Parser.Combinator
 import Parser.IntegerExpressionParser
 import Parser.FloatExpressionParser
@@ -19,10 +19,10 @@ expressionStartParser = (\_ -> (\y -> (\_ -> y))) <$> spaceParser
 
 
 getConstructorFromSign :: Char -> (Expression -> Expression -> MathExpression)
-getConstructorFromSign '-' = Sub
-getConstructorFromSign '/' = Div
-getConstructorFromSign '+' = Add
-getConstructorFromSign '*' = Mul
+getConstructorFromSign '-' = Subtraction
+getConstructorFromSign '/' = Division
+getConstructorFromSign '+' = Addition
+getConstructorFromSign '*' = Multiplication
 
 
 getCharParsers :: [Char] -> [Parser Char]

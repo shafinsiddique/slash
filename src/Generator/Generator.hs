@@ -400,15 +400,6 @@ getStrEqualityCode :: Register -> Register -> Register -> X86Assembly
 getStrEqualityCode leftReg rightReg dest = getX86Assembly [MOVR (WR RDI) leftReg, MOVR (WR RSI) rightReg,
                                             CALL "_strcmp", MOVR dest (WR RAX)]
 
-getEqualityCode :: Expression -> Register -> Register -> Register -> X86Assembly
-getEqualityCode expr leftReg rightReg dest = case expr of
-    IntExpr _ -> getMathEqualityCode leftReg rightReg dest
-    Addition _ _ -> getMathEqualityCode leftReg rightReg dest
-    Subtraction _ _ -> getMathEqualityCode leftReg rightReg dest
-    Multiplication _ _ -> getMathEqualityCode leftReg rightReg dest
-    StringExpr _ -> getStrEqualityCode leftReg rightReg dest
-    _ -> getEmptyX86Asm
-
 {-
 
 println("%b", let x = True in x -- (rdi))
@@ -422,7 +413,6 @@ trueFalseExprGenerator val reg = let intRepresentation = if val then 1 else 0 in
 booleanExprGenerator :: BooleanOp -> WordReg -> Generator
 booleanExprGenerator expr reg = case expr of
     TrueFalseExpr val -> trueFalseExprGenerator val reg
-
 
 addIfToState :: State ProgramState Integer
 addIfToState = State (\state -> (getIfCounter state + 1, createNewIf state))
@@ -459,26 +449,19 @@ doubleExprGenerator value reg = State (\state ->
 
 mathExprGenerator2 :: MathExpression -> WordReg -> Generator 
 mathExprGenerator2 mathExpr register = case mathExpr of 
-    Add left right -> mathExprGenerator left right AddOp register
-    Sub left right -> mathExprGenerator left right SubOp register
-    Mul left right -> mathExprGenerator left right MulOp register
-    Div left right -> divExprGenerator left right register
-    DoubleExp value -> doubleExprGenerator value register
-    IntExp value -> intExprGenerator value register 
-    VariableExp name -> variableExprGenerator name register
+    Addition left right -> mathExprGenerator left right AddOp register
+    Subtraction left right -> mathExprGenerator left right SubOp register
+    Multiplication left right -> mathExprGenerator left right MulOp register
+    Division left right -> divExprGenerator left right register
+    DoubleExpr value -> doubleExprGenerator value register
+    IntExpr value -> intExprGenerator value register 
+    VariableExpr name -> variableExprGenerator name register
 
 expressionGenerator :: Expression -> WordReg -> Generator
 expressionGenerator expression register  =
     case expression of
-        IntExpr value -> intExprGenerator value register
-        Addition left right -> mathExprGenerator left right AddOp register
-        Subtraction left right -> mathExprGenerator left right SubOp register
-        Multiplication left right -> mathExprGenerator left right MulOp register
-        Division left right -> divExprGenerator left right register
-        DoubleExpr value -> doubleExprGenerator value register
         BooleanOpExpr booleanExpr -> booleanExprGenerator booleanExpr register
         StringExpr value -> stringExprGenerator value register
-        VariableExpr name -> variableExprGenerator name register
         PrintExpr {toPrint = value, expressions = exprs} -> printExprGenerator value exprs register
         LetExpr name typeName value expr -> letExprGenerator name value expr register
         IfExpr cond thenExp elseExp -> ifExprGenerator cond thenExp elseExp register
@@ -499,39 +482,24 @@ addStackAsm asm state = let stackSize = getStackSize state in
     mergeAsm (mergeAsm (getStackAllocationAsm stackSize) asm) (getStackCleanupAsm stackSize)
 
 _mathExpressionHasDouble :: MathExpression -> ProgramState -> Bool 
-_mathExpressionHasDouble (DoubleExp _) _ = True
-_mathExpressionHasDouble (Add left right) table =
+_mathExpressionHasDouble (DoubleExpr _) _ = True
+_mathExpressionHasDouble (Addition left right) table =
                             _expressionHasDouble left table || _expressionHasDouble right table
-_mathExpressionHasDouble (Sub left right) table =
+_mathExpressionHasDouble (Subtraction left right) table =
                             _expressionHasDouble left table || _expressionHasDouble right table
-_mathExpressionHasDouble (Div left right) table =
+_mathExpressionHasDouble (Division left right) table =
                             _expressionHasDouble left table || _expressionHasDouble right table
-_mathExpressionHasDouble (Mul left right) table =
+_mathExpressionHasDouble (Multiplication left right) table =
                             _expressionHasDouble left table || _expressionHasDouble right table
-_mathExpressionHasDouble (VariableExp name) state =
+_mathExpressionHasDouble (VariableExpr name) state =
     case findVariable state name of
         Just VariableInfo {exprType = exprType} -> case exprType of
             DoubleType -> True
             _ -> False
         Nothing -> False
-_mathExpressionHasDouble (IntExp _) _ = False
+_mathExpressionHasDouble (IntExpr _) _ = False
 
 _expressionHasDouble :: Expression -> ProgramState -> Bool
-_expressionHasDouble (DoubleExpr _) _ = True
-_expressionHasDouble (Addition left right) table =
-                            _expressionHasDouble left table || _expressionHasDouble right table
-_expressionHasDouble (Subtraction left right) table =
-                            _expressionHasDouble left table || _expressionHasDouble right table
-_expressionHasDouble (Division left right) table =
-                            _expressionHasDouble left table || _expressionHasDouble right table
-_expressionHasDouble (Multiplication left right) table =
-                            _expressionHasDouble left table || _expressionHasDouble right table
-_expressionHasDouble (VariableExpr name) state =
-    case findVariable state name of
-        Just VariableInfo {exprType = exprType} -> case exprType of
-            DoubleType -> True
-            _ -> False
-        Nothing -> False
     
 _expressionHasDouble (MathExpr mathExpr) state = _mathExpressionHasDouble mathExpr state
 
@@ -548,10 +516,7 @@ getExprType :: Expression -> ProgramState -> ExpressionType
 getExprType (LetExpr name _ value result) state =
     let newState = createAndAddSymbol state name (getExprType value state) in
         getExprType result newState
-getExprType (VariableExpr name) state = case findVariable state name of
-    Just VariableInfo {exprType = exprType} -> exprType
-    Nothing -> ErrorType
-
+        
 getExprType (BooleanOpExpr _) state = BoolType
 
 getExprType (StringExpr _) state = StrType
@@ -581,7 +546,6 @@ generateX86 expressions =
 
 Next Steps :
 
-    - Math Expression Single Type 
     - Function definitions
     - Custom Types
     - Lists

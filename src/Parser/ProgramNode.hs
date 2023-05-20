@@ -18,22 +18,18 @@ instance Show BooleanSign where
 
 data BooleanOp = EqualityExpr Expression Expression | TrueFalseExpr Bool deriving Show
 
-data MathExpression = Add Expression Expression 
-    | Sub Expression Expression 
-    | Div Expression Expression
-    | Mul Expression Expression
-    | IntExp Integer
-    | DoubleExp Double 
-    | VariableExp String
+data MathExpression = Addition Expression Expression 
+    | Subtraction Expression Expression 
+    | Division Expression Expression
+    | Multiplication Expression Expression
+    | IntExpr Integer
+    | DoubleExpr Double 
+    | VariableExpr String
     deriving Show
 
-data Expression = IntExpr Integer | DoubleExpr Double| Addition Expression Expression 
-                | Subtraction Expression Expression
-                | Multiplication Expression Expression | Division Expression Expression 
-                | StringExpr String
+data Expression = StringExpr String
                 | LetExpr {variableName :: String, typeName :: String,  value::Expression, expression::Expression}
                 | PrintExpr { toPrint :: String, expressions :: [Expression] } 
-                | VariableExpr String
                 | BooleanOpExpr BooleanOp
                 | IfExpr BooleanOp Expression Expression
                 | MathExpr MathExpression 

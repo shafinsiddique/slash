@@ -1,1 +1,1 @@
-println("%f", 2.4*2.9)
+println("%d", True)
