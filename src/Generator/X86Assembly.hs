@@ -154,6 +154,7 @@ data X86Instruction = MOV Register String | CALL String |
         | PUSHBytes Integer Register 
         | POPBytes Register Integer
         | XOR Register Register
+        | CONVRIntToDouble DoubleRegister WordReg
         | DEBUG String
 
 instance Show X86Instruction where
@@ -215,6 +216,7 @@ instance Show X86Instruction where
     show (POPBytes reg bytes) = printf "mov %s, [rsp]\n" (show reg) (show (ADDI (WR RSP) bytes))
     show (XOR reg1 reg2) = printf "xor %s, %s" (show reg1) (show reg2)
     show (DEBUG val) = printf "; DEBUG =  %s" val
+    show (CONVRIntToDouble reg reg2) = printf "cvtsi2sd %s, %s" (show reg) (show reg2)
     
 data X86Assembly = X86Assembly {codeSection :: [X86Instruction],
                     dataSection :: [X86Instruction] } deriving Show
