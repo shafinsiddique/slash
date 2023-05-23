@@ -5,8 +5,7 @@ module Parser.ExpressionParser
     letExpressionParser,
     ifExpressionParser,
     programParser,
-    typeNameParser,
-
+    completeTypeNameParser,
 ) where
 
 import Parser.Combinator
@@ -19,9 +18,10 @@ import Parser.Combinator
       runParser,
       oneOrMore,
       wordParserWithSpace,
-      Parser(..), zeroOrMore, ParsingResult (ParsingSuccess, ParsingError)
+      Parser(..), zeroOrMore, ParsingResult (ParsingSuccess, ParsingError),
+      capitalLetterParser,
       )
-    
+
 import Control.Monad
 
 
@@ -41,8 +41,8 @@ letExpressionParser :: Parser Expression
 letExpressionParser = handleLetExpression
                 <$> wordParserWithSpace "let" -- let
                 <*> variableNameParser -- variable name
-                <*> wordParserWithSpace ":"
-                <*> (const <$> typeNameParser <*> spaceAndNewlineParser)
+                <*> wordParser ":"
+                <*> completeTypeNameParser
                 <*> charParser '='
                 <*> expressionParser
                 <*> wordParserWithSpace "in"
@@ -101,13 +101,39 @@ booleanExpressionParser = Parser
                             ParsingSuccess value rest -> ParsingSuccess (BooleanOpExpr value) rest
                             ParsingError e -> ParsingError e)
 
-typeNameParser :: Parser String
-typeNameParser = (\x y -> case y of
-                    Just val -> x:val
-                    Nothing -> [x]) 
-                    <$> anyOf (map charParser ['A','B'..'Z'])
-                    <*> optionalParser anyLetterOrNumberParser
+-- What's in a typename. List A B C or [List]
 
+completeTypeNameParser :: Parser String
+completeTypeNameParser = anyOf [listTypeNameParser, typeNameParser]
+
+trim :: String -> String
+trim [] = ""
+trim (x:xs) = if x == ' ' then (trim xs) else x:xs
+
+typeNameParser :: Parser String
+typeNameParser = do {
+    typeNames <- oneOrMore
+    (do {
+        _ <- spaceAndNewlineParser;
+        firstLetter <- capitalLetterParser;
+        remaining <- optionalParser anyLetterOrNumberParser;
+        _ <- spaceAndNewlineParser;
+        case remaining of
+          Nothing -> return [' ', firstLetter]
+          Just s -> return (' ':(firstLetter:s))
+});
+    return (trim (concat typeNames))
+}
+
+listTypeNameParser :: Parser String
+listTypeNameParser = do {
+    left <- charParser '[';
+    _ <- spaceAndNewlineParser;
+    typeName <- typeNameParser;
+    right <- charParser ']';
+    _ <- spaceAndNewlineParser;
+    return (left:(typeName ++ [right]))
+}
 -- function hello_word (name: String, age: Int) : Int = 3;
 -- FunctionDefinition (In the register, you put the address.)
 -- if in the local stack, otherwise check the argument expressions. 

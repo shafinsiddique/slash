@@ -2,6 +2,7 @@ module Parser.VariableNameParser (variableNameParser,variableExpressionParser, a
 import Parser.Combinator
 import Parser.ProgramNode ( Expression(MathExpr), MathExpression(..) )
 
+-- List String 
 anyLetterOrNumberParser :: Parser String
 anyLetterOrNumberParser = oneOrMore 
                     (anyOf (map charParser (['a','b'..'z']++['A','B'..'Z']++

@@ -20,6 +20,7 @@ module Parser.Combinator
     wordParserWithSpace,
     ifAndParser,
     Parser.Combinator.sequence,
+    capitalLetterParser
 
 ) where
 
@@ -160,3 +161,6 @@ ifAndParser = wordParser "hello" >>= (\x -> wordParser "word" >>= (\y -> return 
 maybeParsingResult :: ParsingResult a -> Maybe a
 maybeParsingResult (ParsingSuccess val rest) = Just val
 maybeParsingResult (ParsingError e) = Nothing
+
+capitalLetterParser :: Parser Char
+capitalLetterParser = anyOf (map charParser ['A', 'B' .. 'Z'])
