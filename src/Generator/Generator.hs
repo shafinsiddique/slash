@@ -11,6 +11,7 @@ import Data.Map
 import Data.Maybe
 import GHC.IO.Handle (NewlineMode(inputNL))
 import Control.Arrow (ArrowChoice(right))
+import Parser.ExpressionTypes(ExpressionType(..))
 doublesArrayConst = "__slash_doubles_array"
 
 

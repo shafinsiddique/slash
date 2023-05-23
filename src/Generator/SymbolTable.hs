@@ -1,8 +1,6 @@
 module Generator.SymbolTable where
 import Data.Map
-import Parser.ReturnType
-
-data ExpressionType = IntType | StrType | DoubleType | BoolType | ErrorType
+import Parser.ExpressionTypes
 
 data VariableInfo = VariableInfo {offset :: Integer, exprType :: ExpressionType}
 

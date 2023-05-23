@@ -30,9 +30,11 @@ import Parser.IntegerExpressionParser
 import Parser.MathExpressionParser (mathExpressionParser)
 import Parser.StringExpressionParser (stringParser, stringParser1)
 import Parser.VariableNameParser(variableNameParser, variableExpressionParser, anyLetterOrNumberParser)
+import Parser.ExpressionTypes (ExpressionType(..))
 
 
-handleLetExpression :: String -> String -> String -> String -> Char -> Expression -> String -> Expression -> Expression
+
+handleLetExpression :: String -> String -> String -> ExpressionType -> Char -> Expression -> String -> Expression -> Expression
 handleLetExpression _ varName _ typeName _ value _ expr = LetExpr {variableName =
         varName, typeName = typeName, value = value, expression = expr}
 
@@ -103,14 +105,14 @@ booleanExpressionParser = Parser
 
 -- What's in a typename. List A B C or [List]
 
-completeTypeNameParser :: Parser String
+completeTypeNameParser :: Parser ExpressionType
 completeTypeNameParser = anyOf [listTypeNameParser, typeNameParser]
 
 trim :: String -> String
 trim [] = ""
 trim (x:xs) = if x == ' ' then (trim xs) else x:xs
 
-typeNameParser :: Parser String
+typeNameParser :: Parser ExpressionType
 typeNameParser = do {
     typeNames <- oneOrMore
     (do {
@@ -122,17 +124,22 @@ typeNameParser = do {
           Nothing -> return [' ', firstLetter]
           Just s -> return (' ':(firstLetter:s))
 });
-    return (trim (concat typeNames))
+    case trim (concat typeNames) of
+        "Integer" -> return IntType
+        "String" -> return StrType
+        "Bool" -> return BoolType
+        "Double" -> return DoubleType
+        s -> return (CustomType s)
 }
 
-listTypeNameParser :: Parser String
+listTypeNameParser :: Parser ExpressionType
 listTypeNameParser = do {
     left <- charParser '[';
     _ <- spaceAndNewlineParser;
     typeName <- typeNameParser;
     right <- charParser ']';
     _ <- spaceAndNewlineParser;
-    return (left:(typeName ++ [right]))
+    return (ListType typeName)
 }
 -- function hello_word (name: String, age: Int) : Int = 3;
 -- FunctionDefinition (In the register, you put the address.)

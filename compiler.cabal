@@ -34,6 +34,7 @@ library internal-lib
         Parser.StringExpressionParser
         Parser.VariableNameParser
         Parser.ReturnType
+        Parser.ExpressionTypes
         Generator.Generator
         Generator.X86Assembly
         Generator.SymbolTable

@@ -3,6 +3,7 @@ import Generator.X86Assembly (X86Assembly, getEmptyX86Asm, Register (..))
 import Generator.SymbolTable
 import Parser.Combinator (charParser)
 import Data.Map
+import Parser.ExpressionTypes ( ExpressionType ) 
 
 data DoublesSection = DoublesSection {values :: [Double], valuesMap :: Map Double Int}
 
