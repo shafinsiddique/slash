@@ -520,8 +520,8 @@ expressionHasDouble :: Expression -> ProgramState -> Bool
 expressionHasDouble = _expressionHasDouble
 
 getExprType :: Expression -> ProgramState -> ExpressionType
-getExprType (LetExpr name _ value result) state =
-    let newState = createAndAddSymbol state name (getExprType value state) in
+getExprType (LetExpr name exprType value result) state =
+    let newState = createAndAddSymbol state name exprType in
         getExprType result newState
 
 getExprType (BooleanOpExpr _) state = BoolType
@@ -553,7 +553,7 @@ generateX86 expressions =
 
 Next Steps :
 
-    - Fix Let Math Bug where 
+    - Fix Let Math Bug where - Done
     - Type Annotations
     - Function definitions
     - Custom Types
